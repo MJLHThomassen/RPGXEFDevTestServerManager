@@ -1,0 +1,24 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure(2) do |config|
+	config.vm.box = "TLO/rpgxefdev"
+
+	# Forward RPg-X EF Ports
+	config.vm.network "forwarded_port", guest: 26000, host: 26000, protocol: "udp"
+	config.vm.network "forwarded_port", guest: 27500, host: 27500, protocol: "udp"
+	config.vm.network "forwarded_port", guest: 27910, host: 27910, protocol: "udp"
+	config.vm.network "forwarded_port", guest: 27960, host: 27960, protocol: "udp"
+
+	# Configure VM Resources
+	config.vm.provider "virtualbox" do |v|
+		v.name = "RPGXEFDevLiveTestServer"
+		v.memory = 2048
+		v.cpus = 2
+	end
+	
+	# Install pre-requisites
+	config.vm.provision "shell" do |s|
+		s.inline = "sudo apt-get -y install git daemon"
+	end
+end

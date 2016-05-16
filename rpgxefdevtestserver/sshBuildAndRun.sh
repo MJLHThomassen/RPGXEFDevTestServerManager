@@ -1,0 +1,1 @@
+xfce4-terminal --display=:0.0 -x bash -c /vagrant/buildAndRun.sh

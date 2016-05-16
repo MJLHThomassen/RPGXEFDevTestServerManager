@@ -1,31 +1,68 @@
-﻿@{
-    ViewBag.Title = "Home Page";
+﻿@using System.Activities.Expressions
+@model RPGXEFDevTestServerManager.Models.HomeViewModel
+@{
+    ViewBag.Title = "Index Page";
 }
-
-<div class="jumbotron">
-    <h1>ASP.NET</h1>
-    <p class="lead">ASP.NET is a free web framework for building great Web sites and Web applications using HTML, CSS and JavaScript.</p>
-    <p><a href="http://asp.net" class="btn btn-primary btn-lg">Learn more &raquo;</a></p>
-</div>
+<h1>RPG-X EF Development Test Server Manager</h1>
+<p>Download binaries for RPG-X EF versions running on the Development Test Server at testserver.last-outpost.net.</p>
+<p>Registered users can also push branches to the test server which will automatically be build and copied over to the test server.</p>
 
 <div class="row">
-    <div class="col-md-4">
-        <h2>Getting started</h2>
-        <p>
-            ASP.NET MVC gives you a powerful, patterns-based way to build dynamic websites that
-            enables a clean separation of concerns and gives you full control over markup
-            for enjoyable, agile development.
-        </p>
-        <p><a class="btn btn-default" href="http://go.microsoft.com/fwlink/?LinkId=301865">Learn more &raquo;</a></p>
-    </div>
-    <div class="col-md-4">
-        <h2>Get more libraries</h2>
-        <p>NuGet is a free Visual Studio extension that makes it easy to add, remove, and update libraries and tools in Visual Studio projects.</p>
-        <p><a class="btn btn-default" href="http://go.microsoft.com/fwlink/?LinkId=301866">Learn more &raquo;</a></p>
-    </div>
-    <div class="col-md-4">
-        <h2>Web Hosting</h2>
-        <p>You can easily find a web hosting company that offers the right mix of features and price for your applications.</p>
-        <p><a class="btn btn-default" href="http://go.microsoft.com/fwlink/?LinkId=301867">Learn more &raquo;</a></p>
+    <div class="col-xs-12">
+        <h2>Currently Running</h2>
+        <div id="divCurrentlyRunning">
+            @{Html.RenderPartial("CurrentlyRunning", Model);}
+        </div>
+
+        <h2>Branches</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th class="col-xs-4  col-sm-2">Hashcode</th>
+                    <th class="hidden-xs col-sm-5">Branch Name</th>
+                    <th class="col-xs-4  col-sm-3">Download</th>
+                    <th class="col-xs-4  col-sm-2">Activate</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Branches)
+                {
+                    <tr>
+                        <td class="col-xs-1  col-sm-2 col-md-1"><a href="https://github.com/solarisstar/rpgxEF/commit/@item.HeadCommitHash">@item.HeadCommitHash</a></td>
+                        <td class="hidden-xs col-sm-4 col-md-4">@item.Name</td>
+                        <td class="col-xs-7  col-sm-4 col-md-5@(@item.HasBeenBuild ? "" : " hidden")">
+                            <a class="btn btn-default@(item.AreWindowsX86BinariesBuild ? "" : " disabled")"
+                               href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/windows_x86.zip"
+                               title="Windows 32-bits Binaries"
+                               download>
+                                <i class="fa fa-windows" aria-hidden="true"></i> 32-bits
+                            </a>
+                            <a class="btn btn-default@(item.AreLinuxX86BinariesBuild ? "" : " disabled")"
+                               href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/linux_x86.zip"
+                               title="Linux 32-bits Binaries"
+                               download>
+                                <i class="fa fa-linux" aria-hidden="true"></i> 32-bits
+                            </a>
+                            <a class="btn btn-default@(item.AreLinuxX64BinariesBuild ? "" : " disabled")"
+                               href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/linux_x64.zip"
+                               title="Linux 64-bits Binaries"
+                               download>
+                                <i class="fa fa-linux" aria-hidden="true"></i> 64-bits
+                            </a>
+                            <a class="btn btn-default@(item.IsBuildLogAvailable ? "" : " disabled")"
+                               href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/buildlog.txt"
+                               title="Build Log"
+                               download>
+                                <i class="fa fa-file-text" aria-hidden="true"></i>
+                            </a>
+                        </td>
+                        <td class="col-xs-4  col-sm-4 col-md-5@(@item.HasBeenBuild ? " hidden" : "")">
+                            Not yet activated
+                        </td>
+                        <td class="col-xs-4  col-sm-2 col-md-2">@Html.ActionLink("Activate", "Activate", new { hash = @item.HeadCommitHash }, new { @class = "btn btn-default" })</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>

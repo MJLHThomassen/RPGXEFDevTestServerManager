@@ -5,6 +5,10 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPGXEFDevTestServerManager", "RPGXEFDevTestServerManager\RPGXEFDevTestServerManager.csproj", "{03C800B2-4D9C-4A69-991B-348BDC7CF9CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WithMartin.GitCommandBuilder", "Git\WithMartin.GitCommandBuilder.csproj", "{0FDEED02-CEB5-42B6-8245-20378158A957}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPGXEFDevTestServerManager.ExternalHelpers", "RPGXEFDevTestServerManager.Git\RPGXEFDevTestServerManager.ExternalHelpers.csproj", "{DE771DFA-7BEA-4CDA-9111-31441E4CC889}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{03C800B2-4D9C-4A69-991B-348BDC7CF9CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{03C800B2-4D9C-4A69-991B-348BDC7CF9CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{03C800B2-4D9C-4A69-991B-348BDC7CF9CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0FDEED02-CEB5-42B6-8245-20378158A957}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0FDEED02-CEB5-42B6-8245-20378158A957}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0FDEED02-CEB5-42B6-8245-20378158A957}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0FDEED02-CEB5-42B6-8245-20378158A957}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE771DFA-7BEA-4CDA-9111-31441E4CC889}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE771DFA-7BEA-4CDA-9111-31441E4CC889}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE771DFA-7BEA-4CDA-9111-31441E4CC889}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE771DFA-7BEA-4CDA-9111-31441E4CC889}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

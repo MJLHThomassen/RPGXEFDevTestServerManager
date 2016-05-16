@@ -1,0 +1,48 @@
+﻿@using RPGXEFDevTestServerManager.Extensions
+@model RPGXEFDevTestServerManager.Models.HomeViewModel
+<table class="table">
+    <thead>
+        <tr>
+            <th class="col-xs-4  col-sm-2">Hashcode</th>
+            <th class="hidden-xs col-sm-4">Branch Name</th>
+            <th class="col-xs-4  col-sm-3">Download</th>
+            <th class="col-xs-4  col-sm-2">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="col-xs-1  col-sm-2 col-md-1"><a href="https://github.com/solarisstar/rpgxEF/commit/@Model.CurrentBranch.HeadCommitHash">@Model.CurrentBranch.HeadCommitHash</a></td>
+            <td class="hidden-xs col-sm-4 col-md-4">@Model.CurrentBranch.Name</td>
+            <td class="col-xs-7  col-sm-4 col-md-5">
+                <a class="btn btn-default@(Model.CurrentBranch.AreWindowsX86BinariesBuild ? "" : " disabled")"
+                   href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/windows_x86.zip"
+                   title="Windows 32-bits Binaries"
+                   download>
+                    <i class="fa fa-windows" aria-hidden="true"></i> 32-bits
+                </a>
+                <a class="btn btn-default@(Model.CurrentBranch.AreLinuxX86BinariesBuild ? "" : " disabled")"
+                   href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/linux_x86.zip"
+                   title="Linux 32-bits Binaries"
+                   download>
+                    <i class="fa fa-linux" aria-hidden="true"></i> 32-bits
+                </a>
+                <a class="btn btn-default@(Model.CurrentBranch.AreLinuxX64BinariesBuild ? "" : " disabled")"
+                   href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/linux_x64.zip"
+                   title="Linux 64-bits Binaries"
+                   download>
+                    <i class="fa fa-linux" aria-hidden="true"></i> 64-bits
+                </a>
+                <a class="btn btn-default@(Model.CurrentBranch.IsBuildLogAvailable ? "" : " disabled")"
+                   href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/buildlog.txt"
+                   title="Build Log"
+                   download>
+                    <i class="fa fa-file-text" aria-hidden="true"></i>
+                </a>
+            </td>
+            <td class="col-xs-4  col-sm-2 col-md-2">
+                @Model.CurrentBranch.Status
+                <i class="fa fa-spinner fa-pulse@(Model.CurrentBranch.Status == "Server Running" ? " hidden" : "")"></i>
+            </td>
+        </tr>
+    </tbody>
+</table>

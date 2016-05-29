@@ -4,15 +4,20 @@ RPGXEFBuidHistoryPath=/vagrant/RPGXEFBuildHistory
 BuildMode=release
 
 # Navigate to the source directory
-cd $RPGXEFSrcPath 
+cd $RPGXEFSrcPath
 
 # Create build history directory
+if ! [ -d "$RPGXEFBuidHistoryPath" ]; then
+    mkdir $RPGXEFBuidHistoryPath
+fi
+
+# Remove CommitPath and all files if it already exists
 CommitHash=$(git rev-parse --short HEAD)
 CommitPath=$RPGXEFBuidHistoryPath/$CommitHash
 if [ -d "$CommitPath" ]; then
     rm -rf "$CommitPath"
 fi
-
+echo $CommitHash
 mkdir $CommitPath
 
 # Create a directory for the binaries

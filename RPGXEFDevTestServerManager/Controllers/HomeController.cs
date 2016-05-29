@@ -12,15 +12,15 @@ namespace RPGXEFDevTestServerManager.Controllers
 {
     public class HomeController : Controller
     {
-        public static readonly string BuildHistoryDir = ConfigurationManager.AppSettings["rpgxefbuildhistorypath"];
-
         private readonly GitHelper _gitHelper;
         private readonly SshHelper _sshHelper;
+        public readonly string _buildHistoryDir;
 
-        public HomeController(GitHelper gitHelper, SshHelper sshHelper)
+        public HomeController(GitHelper gitHelper, SshHelper sshHelper, string buildHistoryDir)
         {
             _gitHelper = gitHelper;
             _sshHelper = sshHelper;
+            _buildHistoryDir = buildHistoryDir;
         }
 
         [HttpGet]
@@ -37,15 +37,15 @@ namespace RPGXEFDevTestServerManager.Controllers
                 {
                     HeadCommitHash = branch.Key,
                     Name = branch.Value,
-                    HasBeenBuild = Directory.Exists(Path.Combine(BuildHistoryDir, branch.Key)),
+                    HasBeenBuild = Directory.Exists(Path.Combine(_buildHistoryDir, branch.Key)),
                     IsBuildLogAvailable =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, branch.Key, "binaries", "buildlog.txt")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "buildlog.txt")),
                     AreLinuxX86BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, branch.Key, "binaries", "linux_x86.zip")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "linux_x86.zip")),
                     AreLinuxX64BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, branch.Key, "binaries", "linux_x64.zip")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "linux_x64.zip")),
                     AreWindowsX86BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, branch.Key, "binaries", "windows_x86.zip")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "windows_x86.zip")),
                     AreWindowsX64BinariesBuild = false
                 });
 
@@ -80,25 +80,25 @@ namespace RPGXEFDevTestServerManager.Controllers
         {
             var model = new HomeViewModel
             {
-                BuildHistoryDir = BuildHistoryDir,
+                BuildHistoryDir = _buildHistoryDir,
                 CurrentBranch = new BranchInfo
                 {
                     HeadCommitHash = currentBranch.Key,
                     Name = currentBranch.Value,
-                    HasBeenBuild = Directory.Exists(Path.Combine(BuildHistoryDir, currentBranch.Key)),
+                    HasBeenBuild = Directory.Exists(Path.Combine(_buildHistoryDir, currentBranch.Key)),
                     IsBuildLogAvailable =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, currentBranch.Key, "binaries", "buildlog.txt")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, currentBranch.Key, "binaries", "buildlog.txt")),
                     AreLinuxX86BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, currentBranch.Key, "binaries", "linux_x86.zip")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, currentBranch.Key, "binaries", "linux_x86.zip")),
                     AreLinuxX64BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, currentBranch.Key, "binaries", "linux_x64.zip")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, currentBranch.Key, "binaries", "linux_x64.zip")),
                     AreWindowsX86BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(BuildHistoryDir, currentBranch.Key, "binaries", "windows_x86.zip")),
+                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, currentBranch.Key, "binaries", "windows_x86.zip")),
                     AreWindowsX64BinariesBuild = false
                 }
             };
 
-            var statusFilePath = Path.Combine(BuildHistoryDir, currentBranch.Key, "status.txt");
+            var statusFilePath = Path.Combine(_buildHistoryDir, currentBranch.Key, "status.txt");
 
             if (System.IO.File.Exists(statusFilePath))
             {
@@ -117,17 +117,8 @@ namespace RPGXEFDevTestServerManager.Controllers
             return model;
         }
 
-        public ActionResult About()
-        {
-            ViewBag.Message = "Your application description page.";
-
-            return View();
-        }
-
         public ActionResult Contact()
         {
-            ViewBag.Message = "Your contact page.";
-
             return View();
         }
     }

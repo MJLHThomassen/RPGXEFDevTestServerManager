@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPGXEFDevTestServerManager"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WithMartin.GitCommandBuilder", "Git\WithMartin.GitCommandBuilder.csproj", "{0FDEED02-CEB5-42B6-8245-20378158A957}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPGXEFDevTestServerManager.ExternalHelpers", "RPGXEFDevTestServerManager.Git\RPGXEFDevTestServerManager.ExternalHelpers.csproj", "{DE771DFA-7BEA-4CDA-9111-31441E4CC889}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RPGXEFDevTestServerManager.ExternalHelpers", "RPGXEFDevTestServerManager.ExternalHelpers\RPGXEFDevTestServerManager.ExternalHelpers.csproj", "{DE771DFA-7BEA-4CDA-9111-31441E4CC889}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

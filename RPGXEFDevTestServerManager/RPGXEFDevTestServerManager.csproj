@@ -250,7 +250,6 @@
     <Content Include="Views\_ViewStart.cshtml" />
     <Content Include="Views\Shared\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
-    <Content Include="Views\Home\About.cshtml" />
     <Content Include="Views\Home\Contact.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Account\_ExternalLoginsListPartial.cshtml" />
@@ -292,8 +291,8 @@
       <Project>{0FDEED02-CEB5-42B6-8245-20378158A957}</Project>
       <Name>WithMartin.GitCommandBuilder</Name>
     </ProjectReference>
-    <ProjectReference Include="..\RPGXEFDevTestServerManager.Git\RPGXEFDevTestServerManager.ExternalHelpers.csproj">
-      <Project>{DE771DFA-7BEA-4CDA-9111-31441E4CC889}</Project>
+    <ProjectReference Include="..\RPGXEFDevTestServerManager.ExternalHelpers\RPGXEFDevTestServerManager.ExternalHelpers.csproj">
+      <Project>{de771dfa-7bea-4cda-9111-31441e4cc889}</Project>
       <Name>RPGXEFDevTestServerManager.ExternalHelpers</Name>
     </ProjectReference>
   </ItemGroup>

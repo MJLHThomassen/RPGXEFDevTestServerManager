@@ -1,4 +1,7 @@
-﻿using System.Configuration;
+﻿using System;
+using System.Configuration;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Web.Mvc;
 using System.Web.Optimization;
@@ -10,6 +13,7 @@ using WithMartin.GitCommandBuilder;
 using System.Web;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.EntityFramework;
+using RPGXEFDevTestServerManager.Controllers;
 using RPGXEFDevTestServerManager.ExternalHelpers;
 using RPGXEFDevTestServerManager.Models;
 
@@ -33,9 +37,20 @@ namespace RPGXEFDevTestServerManager
             var container = new Container();
             container.Options.DefaultScopedLifestyle = new WebRequestLifestyle();
 
-            // Register your types, for instance:
-            container.RegisterPerWebRequest(() => new GitCommandBuilder(ConfigurationManager.AppSettings["rpgxefsrcpath"]));
-            container.RegisterPerWebRequest(() => new SshHelper("vagrant", ConfigurationManager.AppSettings["privatekeypath"], "127.0.0.1", 2222));
+            // Get Paths
+            var webRootPath = Server.MapPath("~");
+            var realtiveRpgxEfSrcPath = ConfigurationManager.AppSettings["relative_rpgxefsrc_path"];
+            var relativeRpgxEfBuildHistoryPath = ConfigurationManager.AppSettings["relative_rpgxefbuildhistory_path"];
+            var privateKeyPath = ConfigurationManager.AppSettings["privatekey_path"];
+
+            var physicalRpgxEfSrcPath = Path.GetFullPath(Path.Combine(webRootPath, realtiveRpgxEfSrcPath));
+            var physicalRpgxEfBuildHistoryPath = Path.GetFullPath(Path.Combine(webRootPath, relativeRpgxEfBuildHistoryPath));
+            var physicalPrivateKeyPath = Environment.ExpandEnvironmentVariables(privateKeyPath);
+
+            container.RegisterPerWebRequest(() => new GitCommandBuilder(physicalRpgxEfSrcPath));
+            container.RegisterPerWebRequest(() => new SshHelper("vagrant", physicalPrivateKeyPath, "127.0.0.1", 2222));
+
+            // Register Database stuff
             container.RegisterPerWebRequest<ApplicationDbContext>();
             container.RegisterPerWebRequest<IUserStore<ApplicationUser>>(() => new UserStore<ApplicationUser>(container.GetInstance<ApplicationDbContext>()));
             container.RegisterPerWebRequest(() => HttpContext.Current.GetOwinContext().Authentication);
@@ -44,6 +59,10 @@ namespace RPGXEFDevTestServerManager
 
             // Register all Controllers
             container.RegisterMvcControllers(Assembly.GetExecutingAssembly());
+
+            container.Options.AllowOverridingRegistrations = true;
+            container.RegisterPerWebRequest(() => new HomeController(container.GetInstance<GitHelper>(), container.GetInstance<SshHelper>(), physicalRpgxEfBuildHistoryPath));
+            container.Options.AllowOverridingRegistrations = false;
 
             // ???
             container.RegisterMvcIntegratedFilterProvider();

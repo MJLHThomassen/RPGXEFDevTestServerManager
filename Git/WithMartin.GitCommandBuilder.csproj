@@ -58,6 +58,9 @@
     <Compile Include="FluentApi\Commands\Clean\GitCleanPathableCommands.cs" />
     <Compile Include="FluentApi\Commands\Clean\GitCleanIgnorableCommands.cs" />
     <Compile Include="FluentApi\Commands\Clean\GitCleanCommand.cs" />
+    <Compile Include="FluentApi\Commands\Clone\GitCloneCommand.cs" />
+    <Compile Include="FluentApi\Commands\Clone\GitCloneDirectoryCommand.cs" />
+    <Compile Include="FluentApi\Commands\Clone\GitCloneRepositoryCommand.cs" />
     <Compile Include="FluentApi\Commands\GitCommand.cs" />
     <Compile Include="FluentApi\Commands\GitCommandBase.cs" />
     <Compile Include="FluentApi\Commands\GitCommandArg.cs" />
@@ -72,6 +75,7 @@
     <Compile Include="FluentApi\Commands\ShowRef\GitShowRefExcludableCommands.cs" />
     <Compile Include="FluentApi\Commands\ShowRef\GitShowRefArgableCommands.cs" />
     <Compile Include="FluentApi\Commands\ShowRef\GitShowRefCommand.cs" />
+    <Compile Include="FluentApi\GitClone.cs" />
     <Compile Include="FluentApi\GitClean.cs" />
     <Compile Include="FluentApi\GitCheckout.cs" />
     <Compile Include="FluentApi\GitBranch.cs" />

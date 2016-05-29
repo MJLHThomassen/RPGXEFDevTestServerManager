@@ -28,9 +28,11 @@
                 @foreach (var item in Model.Branches)
                 {
                     <tr>
-                        <td class="col-xs-1  col-sm-2 col-md-1"><a href="https://github.com/solarisstar/rpgxEF/commit/@item.HeadCommitHash">@item.HeadCommitHash</a></td>
-                        <td class="hidden-xs col-sm-4 col-md-4">@item.Name</td>
-                        <td class="col-xs-7  col-sm-4 col-md-5@(@item.HasBeenBuild ? "" : " hidden")">
+                        <td class="col-xs-1 col-sm-2 col-md-1"><a href="https://github.com/solarisstar/rpgxEF/commit/@item.HeadCommitHash">@item.HeadCommitHash</a></td>
+
+                        <td class="hidden-xs col-sm-3 col-md-3">@item.Name</td>
+
+                        <td class="col-xs-7 col-sm-4 col-md-5@(@item.HasBeenBuild ? "" : " hidden")">
                             <a class="btn btn-default@(item.AreWindowsX86BinariesBuild ? "" : " disabled")"
                                href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/windows_x86.zip"
                                title="Windows 32-bits Binaries"
@@ -56,10 +58,23 @@
                                 <i class="fa fa-file-text" aria-hidden="true"></i>
                             </a>
                         </td>
-                        <td class="col-xs-4  col-sm-4 col-md-5@(@item.HasBeenBuild ? " hidden" : "")">
+
+                        <td class="col-xs-4 col-sm-4 col-md-5@(@item.HasBeenBuild ? " hidden" : "")">
                             Not yet activated
                         </td>
-                        <td class="col-xs-4  col-sm-2 col-md-2">@Html.ActionLink("Activate", "Activate", new { hash = @item.HeadCommitHash }, new { @class = "btn btn-default" })</td>
+
+
+                        <td class="col-xs-4 col-sm-3 col-md-3">
+                            @if (Request.IsAuthenticated)
+                            {
+                                @Html.ActionLink("Activate", "Activate", new { hash = @item.HeadCommitHash }, new { @class = "btn btn-default" })
+                            }
+                            else
+                            {
+                                <p>Log in to Activate branches</p>
+                            }
+                        </td>
+
                     </tr>
                 }
             </tbody>

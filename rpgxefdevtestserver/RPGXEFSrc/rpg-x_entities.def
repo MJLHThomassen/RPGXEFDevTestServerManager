@@ -1,0 +1,2392 @@
+//files that hold this stuff in gamecode. Please update them as required:
+//g_breakable.c - func_breakable, misc_model_breakable, misc_ammo_station*, target_repair;
+//g_cinamatic.c - cinematic_camera**;
+//g_client.c - info_player_deathmatch[info_player_start, team_CTF_redplayer, team_CTF_blueplayer, team_CTF_redspawn, team_CTF_bluespawn], info_player_intermission;
+//g_fx.c - fx_spark, fx_steam, fx_bolt, fx_transporter, fx_drip, fx_fountain, fx_surface_explosion, fx_blow_chunks, fx_smoke, fx_electrical_explosion, fx_phaser, fx_torpedo, fx_particle_fire, fx_fire, fx_cooking_steam, fx_elecfire, fx_forge_bolt***, fx_plasma***, fx_energy_stream***, fx_transporter_stream***, fx_explosion_trail***, fx_borg_energy_beam***, fx_shimmery_thing, fx_borg_bolt***;
+//g_misc.c - func_group, info_camp, info_null, info_notnull[misc_teleporter_dest, target_position], light, misc_model, misc_portal_surface, misc_portal_camera, shooter_rocker, shooter_plasma, shooter_grenade, shooter_torpedo;
+//g_mover.c - func_door, func_plat, func_button, path_corner, func_train, func_static, func_forcefield, func_rotating, func_door_rotating, func_bobbing, func_pendulum, func_brushmodel, func_lightchange, func_targetmover, path_point, func_mover, func_stasis_door;
+//g_spawn.c - worldspawn;
+//g_target.c - target_give, target_remove_powerups*, target_delay, target_print, target_speaker, target_laser, target_teleporter, target_relay, target_kill, target_location, target_counter, target_objective*, target_boolean, target_gravity, target_shake, target_evosuit, target_turbolift, target_doorlock, target_alert, target_warp, target_deactivate, target_serverchange, target_levelchange, target_holodeck***, target_shaderremap, target_selfdestruct, target_zone, target_shiphealth;
+//g_trigger.c - trigger_multiple, trigger_always, trigger_push, target_push, trigger_teleport, trigger_hurt, func_timer, trigger_transporter, trigger_radiation;
+//g_turrets.c - misc_turret, misc_laser_arm;
+//g_ui.c - ui_transporter, ui_msd, ui_holodeck;
+//g_usable.c - func_usable;
+
+// *might be removed
+// **Description needs to be worked on
+// ***Entity is currently disabled (usually denied from spawning or freed at spawn)
+
+/*QUAKED misc_model_breakable (1 0 0) (-16 -16 -16) (16 16 16) SOLID AUTOANIMATE DEADSOLID NO_DMODEL INVINCIBLE X X X REPAIRABLE X
+-----DESCRIPTION-----
+Destroyable *.md3-model. If it dies it will display it's damge model if one exists and fire it's targets.
+If repaired by either target_repair (not yet implemented) or hyperspanner (not yet fully implemented) it will fire it's targets
+
+-----SPAWNFLAGS-----
+1: SOLID - Movement is blocked by it, if not set, can still be broken by explosions and shots if it has health
+2: AUTOANIMATE - Will cycle it's anim
+4: DEADSOLID - Stay solid even when destroyed (in case damage model is rather large).
+8: NO_DMODEL - Makes it NOT display a damage model when destroyed, even if one exists. Needs to be set if none exist.
+16: INVINCIBLE - Can only be broken by being used
+32: X - DO NOT USE! This may come in conflict with shared functions from func_breakable.
+64: X - DO NOT USE! This may come in conflict with shared functions from func_breakable.
+128: X - DO NOT USE! This may come in conflict with shared functions from func_breakable.
+256: REPAIRABLE - can be repaired with hyperspanner
+512: X - DO NOT USE! This may come in conflict with shared functions from func_breakable.
+
+-----KEYS-----
+"model"	- path to the arbitrary .md3 file to display
+"health" - how much health to have - default is zero (not breakable)  If you don't set the SOLID flag, but give it health, it can be shot but will not block NPCs or players from moving
+"targetname" - when used, dies and displays damagemodel, if any (if not, removes itself)
+"target" - What to use when it dies
+"paintarget" - target to fire when hit (but not destroyed)
+"wait" - how long minimum to wait between firing paintarget each time hit
+
+"luaDie" - Lua-Hook for when the breakable dies
+
+Damage: default is none
+"splashDamage" - damage to do (will make it explode on death)
+"splashRadius" - radius for above damage
+
+"team" - This cannot take damage from members of this team (2 = blue, 1 = red) 2 will exclude players/clients in RPG-X
+
+"material" - sets the chunk type:
+ 0 - none (default)
+ 1 - metal
+ 2 - glass
+ 3 - glass and metal
+ 4 - wood
+ 5 - stone
+
+-----LUA-----
+Finding an MMB for post-spawn manipulation:
+For this purpose we have created a function that will return the first of these that has a matching s.origin.
+You can get the s.origin ingame as an admin/developer by pointing at the MMB ingame and using the /getorigin-command.
+This is how it should look:
+
+vec = vector.Construct(s.origin[X], s.origin[Y], s.origin[Z]);
+ent = entity.FindMMB(vec);
+
+Refitting repairablility using lua:
+This is a fairly simple addition, here's the code:
+
+vec = vector.Construct(s.origin[X], s.origin[Y], s.origin[Z]);
+MMB = entity.FindMMB(vec);
+MMB:SetSpawnflags(MMB:GetSpawnflags() + 256);
+if MMB:GetHealth() == 0 then --we do require health to be present for repairability
+MMB:SetHealth (1);
+entity.CallSpawn(ent);
+end
+*/
+
+
+/*QUAKED misc_ammo_station (1 0 0) (-16 -16 -16) (16 16 16) 
+-----DESCRIPTION-----
+Grants ammo to client until depleted.
+This useless in RPG-X unless you'd like to spawn a DN-ammo-console.
+
+-----Spawnflags-----
+none
+
+-----KEYS-----
+"health" - how much health the model has - default 60 (zero makes non-breakable)
+"target" - what to use when it dies
+"paintarget" - target to fire when hit (but not destroyed)
+"count" - the amount of health given when used (default 1000)
+
+"team" - This cannot take damage from members of this team and only members of this team can use it (2 = blue, 1 = red) 2 will exclude players/clients in RPG-X
+*/
+
+
+/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32) INITIAL
+-----DESCRIPTION-----
+potential spawning position for deathmatch games.
+
+-----SPAWNFLAGS-----
+1: INITIAL - Preferred spawn for the first spawn of a client when entering a match.
+
+-----KEYS-----
+"target" - entities with matching targetname will be fired if someone spawns here.
+"nobots" - if 1 will prevent bots from using this spot.
+"nohumans" - if 1 will prevent non-bots from using this spot.
+*/
+
+
+/*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 32) INITIAL
+-----DESCRIPTION-----
+Merely a fancy name for info_player_deathmatch.
+On spawn will reset classname appropriately and respawn itself.
+
+-----SPAWNFLAGS-----
+1: INITIAL - Preferred spawn for the first spawn of a client when entering a match.
+
+-----KEYS-----
+"target" - entities with matching targetname will be fired if someone spawns here.
+"nobots" - if 1 will prevent bots from using this spot.
+"nohumans" - if 1 will prevent non-bots from using this spot.
+*/
+
+
+/*QUAKED info_player_intermission (1 0 1) (-16 -16 -24) (16 16 32)
+-----DESCRIPTION-----
+The intermission will be viewed from this point.
+It is also used to spawn spectators.
+Target an info_notnull or similar for the view direction.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+none
+*/
+
+
+/*QUAKED item_botroam (.5 .3 .7) (-16 -16 -24) (16 16 0)
+-----DESCRIPTION-----
+Bots in MP will go to these spots when there's nothing else to get - helps them patrol.
+No use in RPG-X.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+none
+*/
+
+
+/*QUAKED info_camp (0 0.5 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+Used as a positional target for calculations in the compiler/utilities (spotlights, etc), but removed during gameplay.
+
+-----SAPWNFLAGS-----
+none
+
+-----KEYS-----
+"targetname" - have whatever is required point at this.
+*/
+
+
+/*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+Used as a positional target for calculations in the compiler/utilities (spotlights, etc), but removed during gameplay.
+
+-----SAPWNFLAGS-----
+none
+
+-----KEYS-----
+"targetname" - have whatever is required point at this.
+*/
+
+
+/*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+Used as a positional target for in-game calculation, like jumppad targets.
+target_position does the same thing
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"targetname" - have whatever is required point at this.
+*/
+
+
+/*QUAKED lightJunior (0 1 0) (-8 -8 -8) (8 8 8) LINEAR NO_INCIDENCE X X X NORMALIZED_COLOR FORCE_DISTANCE_ATTENUATION 
+-----DESCRIPTION-----
+Light source for the compiler. Will be removed ingame.
+This type of light only affects the light grid (Entity lighting only no world lighting).
+
+-----SPAWNFLAGS-----
+1: LINEAR - checkbox gives linear falloff instead of inverse square
+2: NO_INCIDENCE - checkbox makes lighting smoother
+4: X - Unknown. Usage not recomended.
+8: X - Unknown. Usage not recomended.
+16: X - Unknown. Usage not recomended.
+
+q3map2:
+32: NORMALIZED_COLOR - light color gets normalized by the compiler
+64: FORCE_DISTANCE_ATTENUATION - distance attenuation is enforced
+
+-----KEYS-----
+"light" - overrides the default 300 intensity.
+"radius" - overrides the default 64 unit radius of a spotlight at the target point.
+"_color" - light color
+
+q3map2:
+"_style" - light style number
+"fade" - Fade factor of light attenuation of linear lights. (Linear lights vanish at light/(fade * 8000).
+"_anglescale" - scales angle attenuation
+"scale" - intensity multiplier
+"_samples" - number of samples to use to get soft shadows from a light
+"_deviance" - position deviance of the samples of a regular light
+"_filterradius" - filter radius for this light
+"_sun" - if 1, this light is an infinite sun light
+*/
+
+
+/*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) LINEAR NO_INCIDENCE X X NO_GRID NORMALIZED_COLOR FORCE_DISTANCE_ATTENUATION 
+-----DESCRIPTION-----
+Light source for the compiler. Will be removed ingame.
+Lights pointed at a target (info_null) will be spotlights.
+
+-----SPAWNFLAGS-----
+1: LINEAR - checkbox gives linear falloff instead of inverse square
+2: NO_INCIDENCE - checkbox makes lighting smoother
+4: X - Unknown. Usage not recomended.
+8: X - Unknown. Usage not recomended.
+
+q3map2:
+16: NO_GRID - light does not affect the grid
+32: NORMALIZED_COLOR - light color gets normalized by the compiler
+64: FORCE_DISTANCE_ATTENUATION - distance attenuation is enforced
+
+-----KEYS-----
+"light" - overrides the default 300 intensity.
+"radius" - overrides the default 64 unit radius of a spotlight at the target point.
+"_color" - light color
+
+q3map2:
+"_style" - light style number
+"fade" - Fade factor of light attenuation of linear lights. (Linear lights vanish at light/(fade * 8000).
+"_anglescale" - scales angle attenuation
+"scale" - intensity multiplier
+"_samples" - number of samples to use to get soft shadows from a light
+"_deviance" - position deviance of the samples of a regular light
+"_filterradius" - filter radius for this light
+"_sun" - if 1, this light is an infinite sun light
+"_flareshader" - shader for a flare surface generated by this light
+"_flare" - when set, this light is a flare without a specified shader
+*/
+
+
+/*QUAKED misc_teleporter_dest (1 0 0) (-32 -32 -24) (32 32 -16)
+-----DESCRIPTION-----
+Merely a fancy name for info_notnull.
+was originally used for teleporters but became redundant.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"targetname" - have whatever is required point at this.
+*/
+
+/*QUAKED target_position (0 0.5 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+Merely a fancy name for info_notnull.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"targetname" - have whatever is required point at this.
+*/
+
+
+/*QUAKED misc_model (1 0 0) (-16 -16 -16) (16 16 16) CAST_SHADOWS CLIP_MODEL FORCE_META 
+-----DESCRIPTION-----
+Will just spawn and display it's model.
+Can be hooked up with a brushmodel-entity to move relative to.
+
+-----SPAWNFLAGS-----
+q3map2:
+1: CAST_SHADOWS - Model will cast shadows.
+2: CLIP_MODEL - Model will be clipped so noone can pass trough.
+4: FORCE_META - will enforce a meta-compile for .bsp-build even if the compiler wasn't told to do so.
+
+-----KEYS-----
+"model" - arbitrary .md3 file to display
+"target" - brushmodel-entity to attach to 
+
+q3map2:
+"_castShadows" OR "_cs" sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" sets whether the entity receives shadows
+"modelscale" scaling factor for the model to include
+"modelscale_vec" non-uniform scaling vector for the model to include
+"model2" path name of second model to load
+"_frame" frame of model to load
+"_frame2" frame of second model to load
+*/
+
+
+/*QUAKED misc_portal_surface (0 0 1) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+The portal surface nearest this entity will show a view from the targeted misc_portal_camera, or a mirror view if untargeted.
+This must be within 64 world units of the surface!
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - misc_portal_camera's to target
+"targetname" - When used, cycles to the next misc_portal_camera it's targeted
+"wait" - makes it auto-cycle between all cameras it's pointed at at intevervals of specified number of seconds. Default = -1 = don't autocycle
+	cameras will be cycled through in the order they were created on the map.
+	if this and the first camera are -1 there will be no autocycle.
+	if this is -1 but the first camera is positive the wait will be adapted as a faulsafe measure should one of the later cameras lack an individual wait.
+"swapname" - will pause/unpause the autocycle. The next cycle will happen aufer "wait" seconds, so wait is required for this.
+	requires SELF/NO_ACRIVATOR
+
+-----USAGE-----
+Autocycle or manual Cycle usually only makes sence for a survaliance-station or security.
+For a viewscreen or a communications channel make the brush having the portal-texture a func_usable and treat is as described on that entity for VFX-Entities.
+*/
+
+/*QUAKED misc_portal_camera (0 0 1) (-8 -8 -8) (8 8 8) SLOWROTATE FASTROTATE
+-----DESCRIPTION-----
+The target for a misc_portal_surface.
+You can set either angles or target another entity (NOT an info_null or similar) to determine the direction of view.
+
+-----SPAWNFLAGS-----
+1: SLOWROTATE - slowly rotates around it's axis of view
+2: FASTROTATE - quickly rotates around it's axis of view
+
+-----KEYS-----
+"targetname" - have misc_portal_surface target this
+"roll" - an angle modifier to orient the camera around the target vector. Default is 0.
+"wait" - delay for autocycle misc_portal_surface. Will overwrite theirs. Default is -1 = use surface-value.
+*/
+
+/*QUAKED shooter_rocket (1 0 0) (-16 -16 -16) (16 16 16)
+-----DESCRIPTION-----
+When used fires a rocket at either the target or the current direction.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - direction to fire to
+"random" - the number of degrees of deviance from the taget. (1.0 default)
+*/
+
+/*QUAKED shooter_torpedo (1 0 0) (-16 -16 -16) (16 16 16)
+-----DESCRIPTION-----
+When used fires a torpedo at either the target or the current direction.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - direction to fire to
+"random" - the number of degrees of deviance from the taget. (1.0 default)
+*/
+
+/*QUAKED shooter_plasma (1 0 0) (-16 -16 -16) (16 16 16)
+-----DESCRIPTION-----
+When used fires a plasma-burst at either the target or the current direction.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - direction to fire to
+"random" - the number of degrees of deviance from the taget. (1.0 default)
+*/
+
+/*QUAKED shooter_grenade (1 0 0) (-16 -16 -16) (16 16 16)
+-----DESCRIPTION-----
+When used fires a grenade at either the target or the current direction.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - direction to fire to
+"random" - the number of degrees of deviance from the taget. (1.0 default)
+*/
+
+
+/*QUAKED path_corner (.5 .3 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+func_train path corners.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - next path corner and other targets to fire
+"speed" - speed to move to the next corner
+"wait" - seconds to wait before behining move to next corner
+*/
+
+/*QUAKED path_point (.5 .3 0) (-8 8 8) (8 8 8) START_POINT
+-----DESCRIPTION-----
+Target position for the discontinued func_mover
+
+-----SPAWNFLAGS-----
+1: START_POINT - this is the first path_point for the train
+
+-----KEYS-----
+"target" - next path_point
+"wait" - time beforce moving on, -1 wait until used
+"damage" - used to tell the func_mover it should fire it's targets here
+"angles" - to rotate to
+*/
+
+
+/*QUAKED worldspawn (0 0 0) ?
+-----DESCRIPTION-----
+Every map should have exactly one worldspawn.
+It holds some general information on the map.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"music" - path to WAV or MP3 files (e.g. "music\intro.mp3 music\loopfile.mp3")
+"gravity" - 800 is default gravity
+"message" - Text to print during connection process
+
+Keys irrelevant for RPG-X
+"fraglimit" - overrides server's limit
+"capturelimit" - overrides server's capturelimit (use with team AddScores)
+"timelimit" - overrides server's timelimit
+"timelimitWinningTeam" - "red" or "blue" - this team will win when the timelimit runs out
+
+q3map2:
+"_blocksize" block size for unconditional BSP subdivisions
+"_celshader" use the specified cel shader for the world
+"_lightmapscale" set the lightmapscale for the world
+"_ignoreleaks" when set, no leak test is performed
+"_foghull" must be set to a sky shader when _fog is used
+"_fog" if set, the whole map is fogged using the given shader name
+"gridsize" resolution of the light grid
+"_ambient" amount of ambient light
+"_minvertexlight" amount of minimum vertex light
+"_mingridlight" amount of minimum grid light
+"_minlight" amount of minimum light
+"_keepLights" if set, light entities are not stripped from the BSP file when compiling
+"_style42rgbgen" |rgbGen|-like shader definition string for light style 42 (works the same way for all style numbers)
+"_style42alphagen" |alphaGen|-like shader definition string for light style 42 (works the same way for all style numbers)
+*/
+
+
+/*QUAKED target_give (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Gives all the weapons specified here in the list.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"items" - separated by ' | ', specify the items
+EG "WP_5 | WP_14" etc
+(Don't forget the spaces!)
+*/
+
+
+/*QUAKED target_remove_powerups (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+takes away all the activators powerups.
+Used to drop flight powerups into death puts.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+none
+*/
+
+
+/*QUAKED target_delay (1 0 0) (-8 -8 -8) (8 8 8) SELF
+-----DESCRIPTION-----
+When used fires it'd target after a delay of 'wait' seconds
+
+-----SPAWNFLAGS-----
+1: SELF - use the entity as activator instead of it's own activator when using it's targets (use this flag for targets that are not called by their targetname (e.g. swapname))
+
+-----KEYS-----
+"wait" - seconds to pause before firing targets.
+"random" - delay variance, total delay = delay +/- random seconds
+
+"luaUse" - lua function to call at the beginning of the delay
+luaThink - lua function to call at end of delay
+*/
+
+
+/*QUAKED target_print (1 0 0) (-8 -8 -8) (8 8 8) redteam blueteam private
+-----DESCRIPTION-----
+This will display the 'message' in the lower right corner for all reciepients.
+By default every client get's the message however this can be limited via spawnflags.
+
+-----SPAWNFLAGS-----
+1: redteam - everyone on the red team gets the message
+2: blueteam - everyone on the blue team gets the message
+4: private - only the activator gets the message
+
+-----KEYS-----
+"message"	text to print
+*/
+
+/*QUAKED target_speaker (1 0 0) (-8 -8 -8) (8 8 8) LOOPED_ON LOOPED_OFF GLOBAL ACTIVATOR 
+-----DESCRIPTION-----
+A sound-file to play.
+By default this will be played once locally. 
+The specifics on how to play are set via spawnflags.
+
+Looping Sounds may not be combined with GLOBAL or ACTIVATOR
+Multiple identical looping sounds will just increase volume without any speed cost.
+Using a looping target_speaker will toggle it's sound on or off.
+
+Using a target_speaker designed to play it's sound once will play that sound.
+
+-----SPAWNFLAGS-----
+1: LOOPED_ON - this Speaker will loop it's sound and will be active at spawn.
+2: LOOPED_OFF - this Speaker will loop it's sound and will be inactive at spawn.
+4: GLOBAL - the sound will be played once globally so every client will hear it.
+8: ACTIVATOR - The sound will be played once for the activator only to hear.
+
+-----KEYS-----
+"noise" - file to play
+"wait" - Seconds between auto triggerings, default = 0 = don't auto trigger
+"random" - wait variance, default is 0, delay would be wait +/- random
+*/
+
+/*QUAKED target_laser (0 .5 .8) (-8 -8 -8) (8 8 8) START_ON
+-----DESCRIPTION-----
+When triggered, fires a laser.  You can either set a target or a direction.
+
+-----SPAWNFLAGS-----
+1: START_ON - will be on at spawn
+
+-----KEYS-----
+"targetname" - when used will toggle on/off
+"target" - point to fire laser at
+*/
+
+/*QUAKED target_teleporter (1 0 0) (-8 -8 -8) (8 8 8) VISUAL_FX SUSPENDED DEACTIVATED
+-----DESCRIPTION-----
+The activator will be instantly teleported away.
+
+-----SPAWNFLAGS-----
+1: VISUAL_FX - Instead of instant teleportation with no FX, entity will play the Star Trek style
+	transporter effect and teleport over the course of an 8 second cycle.
+	
+	NB-If using the transporter VISUAL_FX, place the target entity so it's right on top of
+	the surface you want the player to appear on.  It's been hardcoded to take this offset into
+	account only when the VISUAL_FX flag is on
+	
+2: SUSPENDED - Unless this is checked, the player will materialise on top of the first solid surface underneath the entity
+4: DEACTIVATED - Teleporter will be deactiavted at spawn
+
+-----KEYS-----
+"targetname" - Any entities targeting this will activate it when used.
+"target" - Name of one or more info_notnull entities that the player teleport to.
+"swapname" - Activate/Deactivate (Using entity needs SELF/NOACTIVATOR)
+*/
+
+
+/*QUAKED target_relay (.5 .5 .5) (-8 -8 -8) (8 8 8) RED_ONLY BLUE_ONLY RANDOM SELF
+-----DESCRIPTION-----
+This doesn't perform any actions except fire its targets.
+It is also a nice function-caller via luaUse.
+
+-----SPAWNFLAGS-----
+1: RED_ONLY - Only members from the red team can use this
+2: BLUE_ONLY - Only members from the blue team can use this
+4: RANDOM - only one of the entities with matching targetname will be fired, not all of them
+8: SELF - use the entity as activator instead of it's own activator when using it's targets (use this flag for targets that are not called by their targetname (e.g. swapname))
+
+-----KEYS-----
+"targetname" - calling this will fire the entity
+"target" - targetname of entities to fire
+"luaUse" - lua function to call on use
+*/
+
+
+/*QUAKED target_kill (.5 .5 .5) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Kills the activator.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"targetanme" - the activator calling this will be telefragged if client
+*/
+
+/*QUAKED target_location (0 0.5 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Location to display in the player-list (usually Tab)
+Closest target_location in sight used for the location, if nonein sight, closest in distance
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"message" - location name to display. Can be colorized using '^X' where X is one of the following numbers
+	0:white 1:red 2:green 3:yellow 4:blue 5:cyan 6:magenta 7:white
+
+-----LocEdit-----
+target_locations can also be spawned by a <mapname>.locations-file.
+While creating this was hard work for many years, a new command makes it quite easy: LocEdit
+
+There are a few basic commands:
+/locedit start <type>
+	This will open the file. 
+	For type set 1 if you'd like to restrict a location so only admins can autorise transportation there.
+	Else set 0.
+
+For Type = 0: /locedit add "<location-name>"
+For Type = 1: /locedit add <protected> "<location-name>"
+	this will add a new location to the list.
+	It will grab your current position as well as your yaw-angle (around the Z-Axis) and dump them to the file with the parameters.
+	If you set protected 1 only admins can authorise transportation there.
+	location-name can be colorized as stated above. You need to put it in "".
+
+/locedit nl
+	this will simply add an empty line. If you have to manually edit the file at a later date this will help you get oriented.
+
+/locedit stop
+	this will close the file.
+*/
+
+
+/*QUAKED target_counter (1.0 0 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+Acts as an intermediary for an action that takes multiple inputs.
+After the counter has been triggered "count" times it will fire all of it's targets and remove itself.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"count" - number of usages required before targets are fired. Default is 2
+"targetname" - Will reduce count by one.
+"target" will be fired once count hit's 0
+*/
+
+
+/*QUAKED target_objective (1.0 0 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+When used, the objective in the <mapname>.efo with this objective's "count" will be marked as completed
+NOTE: the objective with the lowest "count" will be considered the current objective
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"count" - number of objective (as listed in the maps' <mapname>.efo)
+"targetname" - when fired marks objective as complete
+
+*/
+
+
+/*QUAKED team_CTF_redplayer (1 0 0) (-16 -16 -16) (16 16 32) INITIAL
+-----DESCRIPTION-----
+Merely a fancy name for info_player_deathmatch.
+
+-----SPAWNFLAGS-----
+1: INITIAL - Preferred spawn for the first spawn of a client when entering a match.
+
+-----KEYS-----
+"target" - entities with matching targetname will be fired if someone spawns here.
+"nobots" - if 1 will prevent bots from using this spot.
+"nohumans" - if 1 will prevent non-bots from using this spot.
+*/
+
+
+/*QUAKED team_CTF_blueplayer (0 0 1) (-16 -16 -16) (16 16 32) INITIAL
+-----DESCRIPTION-----
+Merely a fancy name for info_player_deathmatch.
+
+-----SPAWNFLAGS-----
+1: INITIAL - Preferred spawn for the first spawn of a client when entering a match.
+
+-----KEYS-----
+"target" - entities with matching targetname will be fired if someone spawns here.
+"nobots" - if 1 will prevent bots from using this spot.
+"nohumans" - if 1 will prevent non-bots from using this spot.
+*/
+
+
+/*QUAKED team_CTF_redspawn (1 0 0) (-16 -16 -24) (16 16 32) INITIAL
+-----DESCRIPTION-----
+Merely a fancy name for info_player_deathmatch.
+
+-----SPAWNFLAGS-----
+1: INITIAL - Preferred spawn for the first spawn of a client when entering a match.
+
+-----KEYS-----
+"target" - entities with matching targetname will be fired if someone spawns here.
+"nobots" - if 1 will prevent bots from using this spot.
+"nohumans" - if 1 will prevent non-bots from using this spot.
+*/
+
+
+/*QUAKED team_CTF_bluespawn (0 0 1) (-16 -16 -24) (16 16 32) INITIAL
+-----DESCRIPTION-----
+Merely a fancy name for info_player_deathmatch.
+
+-----SPAWNFLAGS-----
+1: INITIAL - Preferred spawn for the first spawn of a client when entering a match.
+
+-----KEYS-----
+"target" - entities with matching targetname will be fired if someone spawns here.
+"nobots" - if 1 will prevent bots from using this spot.
+"nohumans" - if 1 will prevent non-bots from using this spot.
+*/
+
+
+/*QUAKED trigger_multiple (.5 .5 .5) ? RED_OK BLUE_OK TEAM_ONLY
+-----DESCRIPTION-----
+Variable sized repeatable trigger.  Must be targeted at one or more entities.
+so, the basic time between firing is a random time between
+(wait - random) and (wait + random)
+
+-----SPAWNFLAGS-----
+1: RED_OK - People on the red team can fire this trigger
+2: BLUE_OK - People on the blue team can fire this trigger
+4: TEAM_ONLY - Only people on red or blue can fire this trigger (not TEAM_FREE like in straight holomatch or spectators)
+
+-----KEYS-----
+"wait" - Seconds between triggerings, 0.5 default, -1 = one time only.
+"random" - wait variance, default is 0
+*/
+
+
+/*QUAKED trigger_always (.5 .5 .5) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+This trigger will always fire.  It is activated by the world.
+Actually this is going to fire once 0.3 secs after spawn, so it's more a trigger_init.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+target - targets to fire
+*/
+
+
+/*QUAKED trigger_push (.5 .5 .5) ?
+-----DESCRIPTION-----
+Jumpfield/Booster Effect predicted on client side. This is activated by touch function.
+
+-----SPAWNFLAGS-----
+None
+
+-----KEYS-----
+target - apex of the leap. Must be a target_position or info_notnull.
+*/
+
+/*QUAKED target_push (.5 .5 .5) (-8 -8 -8) (8 8 8) ENERGYNOISE
+-----DESCRIPTION-----
+Pushes the activator in the direction of angle, or towards a target apex.
+This is predicted on the serverside and is triggered by use-function.
+
+-----SPAWNFLAGS-----
+1: ENERGYNOISE - play energy noise instead of windfly
+
+-----KEYS-----
+"speed" - defaults to 1000
+"target" - apex of the leap. Must be a target_position or info_notnull.
+*/
+
+/*QUAKED trigger_teleport (.5 .5 .5) ? SPECTATOR RANDOM VISUAL_FX SUSPENDED DEACTIVATED
+-----DESCRIPTION-----
+Allows client side prediction of teleportation events.
+Must point at a target_position or info_notnull, which will be the teleport destination.
+
+-----SPAWNFLAGS-----
+1: SPECTATOR: If set, only spectators can use this teleport.
+ Spectator teleporters are not normally placed in the editor, but are created
+ automatically near doors to allow spectators to move through them.
+2: RANDOM: send player to random info_player_deathmatch spawn point
+4: VISUAL_FX: plays the Star Trek transporter FX and beams the player out slowly
+8: SUSPENDED: player appears with the bounding box aligned to the bottom of the target
+ If this isn't set, the player materializes at the first solid surface under it
+16: DEACTIVATED: Spawns deactivated
+
+-----KEYS-----
+"swapname" - ACTIVATE/DEACTIVATE (Using entity needs SELF/NOACTIVATOR)
+"wait" - time before trigger deactivates itself automatically
+"soundstart" - sound to play if triggered
+"health" - default is original behavior (speed of 400), any other value will be the
+ speed at which the player is spewed forth from the tranpsorter destination. -1
+ if you want no speed. The transporter VISUAL_FX flag will only work if the health
+ is set to 0 or -1 as it cannot support 'spewing'.
+*/
+
+
+/*QUAKED misc_turret (1 0 0) (-8 -8 -8) (8 8 8) START_OFF
+-----DESCRIPTION-----
+Will aim and shoot at enemies
+
+-----SPAWNFLAGS-----
+1: START_OFF - Starts off
+
+-----KEYS-----
+random - How far away an enemy can be for it to pick it up (default 512)
+speed - How fast it turns (degrees per second, default 30)
+wait	- How fast it shoots (shots per second, default 4, can't be less)
+dmg	- How much damage each shot does (default 5)
+health - How much damage it can take before exploding (default 100)
+  
+splashDamage - How much damage the explosion does
+splashRadius - The random of the explosion
+NOTE: If either of the above two are 0, it will not make an explosion
+  
+targetname - Toggles it on/off
+target - What to use when destroyed
+
+"team" - This cannot take damage from members of this team and will not target members of this team (2 = blue, 1 = red) 2 will exclude players in RPG-X
+*/
+
+
+/*QUAKED misc_laser_arm (1 0 0) (-8 -8 -8) (8 8 8) 
+-----DESCRIPTION-----
+What it does when used depends on it's "count" (can be set by a lua-script)
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+	count:
+		0 (default) - Fire in direction facing
+		1 turn left
+		2 turn right
+		3 aim up
+		4 aim down
+
+  speed - How fast it turns (degrees per second, default 30)
+  dmg	- How much damage the laser does 10 times a second (default 5 = 50 points per second)
+  wait  - How long the beam lasts, in seconds (default is 3)
+  
+  targetname - to use it
+  target - What thing for it to be pointing at to start with
+
+  "startRGBA" - laser color, Red Green Blue Alpha, range 0 to 1 (default  1.0 0.85 0.15 0.75 = Yellow-Orange)
+*/
+
+// q3map2
+
+/*QUAKED _decal (0 1.0 0) ?
+-------- KEYS --------
+"target" the name of the entity targetted at for projection
+-------- SPAWNFLAGS --------
+(none)
+-------- NOTES --------
+Compiler-only entity that specifies a decal to be projected. Should
+contain 1 or more patch meshes (curves) and target an info_null entity.
+The distance between the center of the _decal entity and the target is the
+axis and distance of projection.
+*/
+
+/*QUAKED _skybox (0.77 0.88 1.0) (-4 -4 -4) (4 4 4)
+-------- KEYS --------
+"angle" : rotation angle of the sky surfaces.
+"angles" : Individual control of PITCH, YAW, and ROLL (default 0 0 0).
+"_scale" : scaling factor (default 64), good values are between 50 and 300, depending on the map.
+-------- SPAWNFLAGS --------
+(none)
+-------- NOTES --------
+Compiler-only entity that specifies the origin of a skybox (a wholly contained, seperate area of the map),
+similar to some games' portal skies. When compiled with Q3Map2, the skybox surfaces will be visible from any 
+place where sky is normally visible. It will cast shadows on the normal parts of the map, and can be used
+with cloud layers and other effects.
+*/
+
+
+// RPG-X trigger_*
+
+/*QUAKED trigger_hurt (.5 .5 .5) ? START_OFF TOGGLE SILENT NO_PROTECTION SLOW EVO_PROTECT NO_ADMIN
+-----DESCRIPTION-----
+Any entity that touches this will be hurt.
+It does dmg points of damage each server frame
+Targeting the trigger will toggle its on / off state.
+
+-----SPAWNFLAGS-----
+1: START_OFF - trigger will not be doing damage until toggled on
+2: TOGGLE - can be toggled
+4: SILENT - supresses playing the sound
+8: NO_PROTECTION - *nothing* stops the damage
+16: SLOW - changes the damage rate to once per second
+32: EVO_PROTECT - Evosuit protects the client
+64: NO_ADMIN - admins don't get hurt
+
+-----KEYS-----
+"dmg" - default 5 (whole numbers only)
+*/
+
+/*QUAKED trigger_transporter (0.5 0.5 0.5) ?
+-----DESCRIPTION-----
+This is used in combination with ui_transporter.
+Have this be targeted by ui_transporter.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"wait"			time to wait before trigger gets deactivated again(in seconds, default 5)
+"soundstart"	transport sound;
+*/
+
+/*QUAKED trigger_radiation (0.5 0.5 0.5) ? START_OFF MAP_WIDE
+-----DESCRIPTION-----
+This can be used in three ways:
+- as radiation volume trigger
+- as mapwide radiation
+
+-----SPAWNFLAGS-----
+1: START_OFF - ent is off at spawn
+2: MAP_WIDE - mapwide radiation
+
+-----KEYS-----
+The damage the radiation does is calculated from these two values:
+"dmg"			damage(default 1)
+"wait"			wait(seconds, default 10)
+
+Forumla is: dps = dmg / wait
+*/
+
+// RPG-X target_*
+
+/*QUAKED target_boolean (.5 .5 .5) (-8 -8 -8) (8 8 8) START_TRUE SWAP_FIRE SELF
+-----DESCRIPTION-----
+Acts as an if statement. When fired normaly if true it fires one target, if false it fires another.
+
+-----SPAWNFLAGS-----
+1: START_TRUE - the boolean starts true.
+2: SWAP_FIRE - when the swap command is issued it will also fire the new target.
+4: SELF - use the entity as activator instead of it's own activator when using it's targets (use this flag for targets that are not called by their targetanme)
+
+-----KEYS-----
+"targetname" - this when fired will fire the target according to which state the boolean is in
+"swapname" - this when fired will swap the boolean from one state to the opposite
+"truename" - this when fired will swap the boolean's state to true
+"falsename" - this when fired will sawp the boolean's state to false
+"truetarget" - this will be fired if the boolean is true then the targetname is recieved
+"falsetarget" - this will be fired if the boolean is false then the targetname is recieved
+*/
+
+/*QUAKED target_gravity (.5 .5 .5) (-8 -8 -8) (8 8 8) PLAYER_ONLY MAP_GRAV
+-----DESCRIPTION-----
+This changes the servers gravity to the ammount set.
+
+-----SPAWNFLAGS-----
+1: PLAYER_ONLY - If select this will only change the gravity for teh actiator. TiM: an actiator eh?
+2: MAP_GRAV - Will reset player to the current global gravity.
+
+-----KEYS-----
+"gravity" - gravity value (default = g_gravity default = 800)
+*/
+
+/*QUAKED target_shake (.5 .5 .5) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+When fired every clients monitor will shake as if in an explosion
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"wait" - Time that the shaking lasts for in seconds
+"intensity" - Strength of shake
+*/
+
+/*QUAKED target_evosuit (.5 .5 .5) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Grants activating clent the EVA-Suit-Flag with all sideeffects associated.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"targetanme" - entity needs to be used
+*/
+
+/*QUAKED target_turbolift (.5 .5 .5) ? x x x x x x x x OFFLINE
+-----DESCRIPTION-----
+Turbolifts are delayed teleporters that send players between
+each other, maintaining their view and position so the transition is seamless.
+If you target this entity with a func_usable, upon activating that useable,
+a menu will appear to select decks.  If you target any useables with this
+entity, they'll be triggered when the sequence starts (ie scrolling light texture brushes).
+If rpg_calcLiftTravelDuration is set to one it is possible to have two usables targeted, one for the
+up and one for the down driection in order to use this set targetname2 of those to 
+<targetname>_up and <targetname>_dn.
+If you target any doors with this entity, they will shut and lock for this sequence.
+For the angles, the entity's angle must be aimed at the main set of doors to the lift area.
+
+-----SPAWNFLAGS-----
+1 - 128: X - Unknown, do not use.
+256: OFFLINE - Turbolift is offline at start
+
+-----KEYS-----
+"deck" - which deck number this is (You can have multiple lifts of the same deck. Entity fails spawn if not specified)
+"deckName" - name of the main features on this deck (Appears in the deck menu, defaults to 'Unknown')
+	use either this or a <mapname>.turbolift-file to store the strings, not both simultainously
+"wait" - number of seconds to wait until teleporting the players (1000 = 1 second, default 3000)
+"soundLoop" - looping sound that plays in the wait period (Defaults to EF SP's sound. '*' for none)
+"soundEnd" - sound that plays as the wait period ends. (Defaults to EF SP's sound. '*' for none)
+"soundStart - sound that plays when the lift starts moving
+"soundStartLength" - how long the start sound is in seconds
+"soundDeactivate" - sound to play if player tries to use an deactivated turbolift
+"waitEnd" - how long to wait from the lift stopping to the doors opening (default 1000 )
+"swapname" - toggles turbolift on/off
+"targetShaderName" - lights off shader
+"falsename" - lights up
+"truename" - lights down
+
+-----LUA-----
+Retrofit:
+Turbolifts are a good thing to retrofit, however they have 2 requirements:
+- a Transporter based turbolift (seamless transportation, does not work wit func_train)
+- at least 1 usable at any turbolift location
+If those are fuffilled you can use the following code at level init to set up the turbolift.
+(this is from enterprise-e-v2 and uses the outdated SetKeyValue-Command. Use Set<key> instead)
+
+		game.Print("--Deck 1 ...");
+			game.Print("---redirecting usables ...");
+				ent = entity.FindBModel(90);
+				ent:SetKeyValue("target", "tld1");
+				ent:SetKeyValue("luaUse", "turbosound");
+				ent = entity.FindBModel(86);
+				ent:SetKeyValue("target", "tld1");
+				ent:SetKeyValue("luaUse", "turbosound");
+				ent = entity.FindBModel(87);
+				ent:SetKeyValue("target", "tld1");
+				ent:SetKeyValue("luaUse", "turbosound");
+				ent = entity.FindBModel(167);
+				ent:SetKeyValue("target", "tld1");
+				ent:SetKeyValue("luaUse", "turbosound");
+				ent = entity.FindBModel(88);
+				ent:SetKeyValue("target", "tld1");
+				ent:SetKeyValue("luaUse", "turbosound");
+				ent = entity.FindBModel(89);
+				ent:SetKeyValue("target", "tld1");
+				ent:SetKeyValue("luaUse", "turbosound");
+			game.Print("---renaming doors ...");
+				ent = entity.FindBModel(7);
+				ent:SetKeyValue("targetname", "tld1doors");
+				ent = entity.FindBModel(8);
+				ent:SetKeyValue("targetname", "tld1doors");
+			game.Print("---Adding turbolift ...");
+				ent = entity.Spawn();
+				ent.SetupTrigger(ent, 144, 100, 98);
+				ent:SetKeyValue("classname", "target_turbolift");
+				ent:SetKeyValue("targetname", "tld1");
+				ent:SetKeyValue("target", "tld1doors");
+				ent:SetKeyValue("health", "1");
+				ent:SetKeyValue("wait", 3000);
+				entity.CallSpawn(ent);
+				mover.SetPosition(ent, -2976, 8028, 887);
+				mover.SetAngles(ent, 0, 270, 0);
+
+Turbolift descriptions have to be added in via <mapname>.turbolift-file.
+
+You may also add in a sound to the usable opening the UI. This is described in func_usable.
+*/
+
+/*QUAKED target_doorlock (1 0 0) (-8 -8 -8) (8 8 8) PRIVATE
+-----DESCRIPTION-----
+Locks/Unlocks a door.
+
+-----SPAWNFLAGS-----
+1: PRIVATE - if set, lockMsg/unlockMsg are only printed for activator
+
+-----KEYS-----
+"target" - breakable to repair (either it's targetname or it's targetname2)
+"lockMsg" - message printed if door gets locked
+"unlockMsg" - message printed if door gets unlocked
+*/
+
+/*QUAKED target_repair (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Repairs a func_breakable..
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" breakable to repair (targetname or targetname2)
+*/
+
+/*QUAKED target_warp (1 0 0) (-8 -8 -8) (8 8 8) START_ON START_EJECTED START_WARP SELF
+-----DESCRIPTION-----
+An entity that manages warp and warpcore.
+
+Any func_usable using this must have NO_ACTIVATOR flag.
+Any target_relay, target_delay, or target_boolean using this must have SELF flag.
+
+-----SPAWNFLAGS-----
+1: START_ON - If set, warpcore is on at start
+2: START_EJECTED - If set, core is ejected at start
+4: START_WARP - ship is on warp at start
+8: SELF - use this for any entity that is called by sth. other than it's targetname (e.g. swapmname)
+
+-----KEYS-----
+"swapWarp" - targetname to toggle warp
+"swapCoreState" - targetname to toggle core on/off state
+"swapCoreEject" - targetname to toggle core ejected state
+"warpTarget" - target to fire when going to warp
+"core" - target core(func_train)
+"coreSwap" - target for visibility swap (need SELF-flag for this)
+"wait" - time before warp can be toggled again after retrieving the core(seconds)
+"greensnd" - target_speaker with warp in sound
+"yellowsnd" - target_speaker with warp out sound
+"redsnd" - target_speaker with core off sound
+"bluesnd" - target_speaker with core on sound
+"soundDeactivate" - sound to play if going to warp but core is deactivated/ejected
+*/
+
+/*QUAKED target_deactivate (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+This entity can be used to de/activate all func_usables with "target" as targetname2.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - func_usable to de/activate(targetname2).
+*/
+
+/*QUAKED target_serverchange (1 0 0) (-8 -8 -8) (8 8 8) START_ON
+-----DESCRIPTION-----
+This will make any client inside it connect to a different server.
+Can be toggled by an usable if the usable has NO_ACTIVATOR spawnflag.
+
+-----SPAWNFLAGS-----
+1: START_ON - will allow transfer form spawn on.
+
+-----KEYS-----
+"serverNum" - server to connect to (rpg_server<serverNum> cvar)
+*/
+
+
+/*QUAKED target_levelchange (1 0 0) (-8 -8 -8) (8 8 8) 
+-----DESCRIPTION-----
+This will change the map if rpg_allowSPLevelChange is set to 1.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - map to load (for example: borg2)
+"wait" - time to wait before levelchange (whole numbers only, -1 for instant levelchange, 0 for default = 5)
+*/
+
+
+// RPG-X func_*
+
+/*QUAKED func_mover (0 .5 .8) ?
+-----DESCRIPTION-----
+Discontinued enhanced mover requiring an origin brush.
+Use Lua for this now.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - path_point to start at
+"speed" - speed to move with (default: 10)
+"aspeed" - angular speed to rotate with (default: 10)
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+/*QUAKED func_timer (0.3 0.1 0.6) (-8 -8 -8) (8 8 8) START_ON
+-----DESCRIPTION-----
+Fires its targets every "wait" seconds.
+Can be turned on or off by using.
+
+-----SPAWNFLAGS-----
+1: START_ON - will be on at spawn and setting up for it's first intervall
+
+-----KEYS-----
+"wait" - base time between triggering all targets, default is 1
+"random" - wait variance, default is 0
+ so, the basic time between firing is a random time between
+ (wait - random) and (wait + random)
+
+q3map2:
+"_clone" _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" see _clone
+"_castShadows" OR "_cs" sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_train (0 .5 .8) ? START_ON TOGGLE BLOCK_STOPS START_INVISIBLE
+-----DESCRIPTION-----
+A train is a mover that moves between path_corner target points.
+Can be turned invisible.
+Trains MUST HAVE AN ORIGIN BRUSH.
+The train spawns at the first target it is pointing at.
+
+-----SPAWNFLAGS-----
+1: START_ON - the train will begin to move after spawn
+2: TOGGLE - the train can be toggled
+4: BLOCK_STOPS - the train will stop if blocked
+8: START_INVISIBLE - the train will be invisible at spawn
+
+-----KEYS-----
+"model2" - .md3 model to also draw
+"speed" - default 100
+"dmg" - default 2
+"noise" - looping sound to play when the train is in motion
+"target" - next path corner
+"color" - constantLight color
+"light" - constantLight radius
+"swapname" - targetname for visiblility change
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_static (0 .5 .8) ?
+-----DESCRIPTION-----
+A bmodel that just sits there, doing nothing.
+Can be used for conditional walls and models.
+If it has an origin-Brush it can be moved using Lua.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"model2" - .md3 model to also draw
+"color" - constantLight color
+"light" - constantLight radius
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_rotating (0 .5 .8) ? START_ON X X_AXIS Y_AXIS x INVISIBLE NO_TOGGLE
+-----DESCRIPTION-----
+You need to have an origin brush as part of this entity. The center of that brush will be
+the point around which it is rotated. It will rotate around the Z axis by default.  You can
+check either the X_AXIS or Y_AXIS box to change that.
+
+-----SPAWNFLAGS-----
+1: START_ON - entity will move at spawn
+2: X - Unknown, do not use
+4: X-AXIS - rotate around the X-Axis
+8: Y-AXIS - rotate around the Y-Axis
+16: X - Unknown, do not use
+32: INVISIBLE - will be invisible at spawn
+64: NO_TOGGLE - will not be toggable
+
+-----KEYS-----
+"model2"	.md3 model to also draw
+"speed"		determines how fast it moves; default value is 100.
+"dmg"		damage to inflict when blocked (2 default)
+"color"		constantLight color
+"light"		constantLight radius
+"swapname"  visibility swap (activator needs NO_ACTIVATOR/SELF)
+
+"pos1"		Angles to end up at in addition to current angles- pitch yaw and roll.  Eg: 0 90 45 
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_bobbing (0 .5 .8) ? X_AXIS Y_AXIS
+-----DESCRIPTION-----
+Don't now what this looks like.
+Normally bobs on the Z axis
+
+-----SPAWNFLAGS-----
+1: X-AXIS - bobs on the X-Axis
+2: Y-AXIS - bobs on the Y-Axis
+
+-----KEYS-----
+"model2" - .md3 model to also draw
+"height" - amplitude of bob (32 default)
+"speed" - seconds to complete a bob cycle (4 default)
+"phase" - the 0.0 to 1.0 offset in the cycle to start at
+"dmg" - damage to inflict when blocked (2 default)
+"color" - constantLight color
+"light" - constantLight radius
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_pendulum (0 .5 .8) ?
+You need to have an origin brush as part of this entity.
+Pendulums always swing north / south on unrotated models.  Add an angles field to the model to allow rotation in other directions.
+Pendulum frequency is a physical constant based on the length of the beam and gravity.
+"model2"	.md3 model to also draw
+"speed"		the number of degrees each way the pendulum swings, (30 default)
+"phase"		the 0.0 to 1.0 offset in the cycle to start at
+"dmg"		damage to inflict when blocked (2 default)
+"color"		constantLight color
+"light"		constantLight radius
+
+q3map2:
+"_clone" _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" see _clone
+"_castShadows" OR "_cs" sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_door_rotating (0 .5 .8) ? START_OPEN CRUSHER REVERSE X_AXIS Y_AXIS LOCKED ADMIN_ONLY CORRIDOR
+-----DESCRIPTION-----
+This is the rotating door... just as the name suggests it's a door that rotates around it's origin Brush.
+The Axis to rotate around is determined by spawnflag.
+
+-----SPAWNFLAGS-----
+1: START_OPEN - the door to moves to its destination when spawned, and operate in reverse.
+2: CRUSHER - The door will stick in it's end position
+4: REVERSE - if you want the door to open in the other direction, use this switch.
+8: X_AXIS - rotate around the X-axis instead of the Z-axis
+16: Y_AXIS - rotate around the Y-axis instead of the Z-axis
+32: LOCKED - Door is locked at spawn
+64: ADMIN_ONLY - only admins can use this door
+128: CORRIDOR - will have a reduced autotrigger volume.
+  
+You need to have an origin brush as part of this entity.  The center of that brush will be
+the point around which it is rotated. It will rotate around the Z axis by default.  You can
+check either the X_AXIS or Y_AXIS box to change that.
+
+"model2" - .md3 model to also draw
+"distance" - how many degrees the door will open
+"speed" - how fast the door will open (degrees/second)
+"wait" - time to wait before returning, default = 2, -1 = move on toggle
+"color" - constantLight color
+"light" - constantLight radius
+"targetname" - door can only open/close when used by anonther entity
+"targetname2" - for target_doorlock
+"soundstart" - sound played when start moving
+"soundstop" - sound played when stop moving
+"soundlocked" - sound played when locked
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_plat (0 .5 .8) NO_TOUCH
+-----DESCRIPTION-----
+Binary mover...I don't know much more until I have tested it...
+Plats are always drawn in the extended position so they will light correctly.
+
+-----SPAWNFLAGS-----
+NO_TOUCH - instead of staying up as long as someone touches it, it will wait "wait" seconds and return
+
+-----KEYS-----
+"targetname" - if targeted will only move when used
+"lip" - default 8, protrusion above rest position
+"height" - total height of movement, defaults to model height
+"speed" - overrides default 200.
+"dmg" - overrides default 2
+"model2" - .md3 model to also draw
+"color" - constantLight color
+"light" - constantLight radius
+"wait" - how many seconds to wait before returning
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+
+/*QUAKED func_button (0 .5 .8) ?
+-----DESCRIPTION-----
+When a button is touched, it moves some distance in the direction of it's angle, triggers all of it's targets, waits some time, then returns to it's original position where it can be triggered again.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"model2" - .md3 model to also draw
+"angle" - determines the opening direction
+"target" - all entities with a matching targetname will be used
+"speed" - override the default 40 speed
+"wait" - override the default 1 second wait (-1 = never return)
+"lip" - override the default 4 pixel lip remaining at end of move
+"health" - if set, the button must be killed instead of touched
+"color" - constantLight color
+"light" - constantLight radius
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+/*QUAKED func_group (0 0 0) ?
+Used to group brushes together just for editor convenience.  They are turned into normal brushes by the utilities.
+
+q3map2:
+"_lightmapscale"	set a diffrent lightmapscale for this func group only
+*/
+
+/*QUAKED func_usable (0 .5 .8) ? STARTOFF AUTOANIM x ALWAYS_ON NOBLOCKCHECK x x x ADMIN_ONLY NO_ACTIVATOR NO_AREAPORTAL DEACTIVATED
+-----DESCRIPTION-----
+A bmodel that can be used directly by the player's "activate" button.
+Can be used for visual FX (like alert lights) or as a button.
+
+-----SPAWNFLAGS-----
+1: START_OFF - the wall will not be there
+2: AUTOANIM - If useing an md3, it will animate
+4: X -Not in Use. Holds ANIM_ONCE for models
+8: ALWAYS_ON - Doesn't toggle on and off when used, just fires target
+16: NOBLOCKCHECK - Will NOT turn on while something is inside it unless this is checked
+32: X - Not in Use.
+64: X - Not in Use.
+128: X - Not in Use.
+256: ADMIN_ONLY - can only be used by admins
+512: NO_ACTIVATOR - use the ent itself instead the player as activator
+1024: NO_AREAPORTAL - don't affect areaportals
+2048: DEACTIVATED - start deactivated
+
+-----KEYS-----
+"targetname" - When used, will toggle on and off
+"target" - Will fire this target every time it is toggled OFF
+"model2" - .md3 model to also draw
+"color" - constantLight color
+"light" - constantLight radius
+"wait" - amount of time before the object is usable again (only valid with ALWAYS_ON flag)
+"health" - if it has health, it will be used whenever shot at/killed - if you want it to only be used once this way, set health to 1
+
+"luaUse" - lua-function to call from scripts/lua/<mapname>/<mapname>.lua when this entity is used
+
+"message" - message string that will display when the player scans this usable with a tricorder
+"messageNum" - the number relating to the message string in the /maps/<mapname>.usables-file that will display when the player scans this usable with a tricorder
+NOTE: only use one of the above ways on a map at a time
+
+"team" - This can only be used by this team (2 = blue, 1 = red) 2 will exclude players in RPG-X
+
+q3map2:
+"_clone" _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" see _clone
+"_castShadows" OR "_cs" sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" sets whether the entity receives shadows
+
+-----USAGE-----
+As stated in the description there are 2 ways to use this kind of entity: As a trigger/activator or as Visual effect.
+It is possible to do both, however giving an entity only one of the functions usually gives the mapper less of a headace.
+Instead use the usable as VFx only and forward any command trough a target_relay.
+
+For trigger-usables you need the following keys:
+"target" - what stuff to fire
+"wait" - how long to wait before fire again
+"spawnflags" - ALWAYS_ON (8) is required. You may also be interested in ADMIN_ONLY (256) NO_ACTIATOR (512) and DEACTIVATED (2048)
+"message" or "messageNum" - display a string if scanned by a tricorder
+
+For VFX-usables these keys might be interesting:
+"targetname" - turns visible/invisible when fired
+"team" - set 2 as this will disallow clients from accidently using this
+"spawnflags" - Interesting here are START_OFF (1), NOBLOCKCHECK (16) and NO_AREAPORTAL (1024)
+
+-----LUA-----
+Sounds for consoles:
+One of the advantages with luaUse-functions is that you can play sounds on the usable you're using this comes in very handy if you'd like to for example play a sound on the turbolift-usable:
+
+	function turbocontrol(ent, other, activator) --set luaUse to turbocontrol for this to trigger
+		if ent.GetCount(entity.Find("info_turbolift")) == 1 then --for a trubolift in particular you need an external information provider as lua can't deal with bit-flags. In this case turbolift would be offline.
+		    sound.PlaySound(ent, "sound/movers/switches/voyneg.mp3", 0);
+		    game.MessagePrint(ent.GetNumber(activator), "=C= Unable to comply: The Turbolift is offline.");
+		else
+			sound.PlaySound(ent, "sound/voice/computer/tour/trblftmenu.mp3", 0);
+		end
+	end
+
+Also if you have a (morer or less) generic console that you want to fire generic console sounds off of you can extend this script for any number of sounds of which one will be picked randomly:
+
+	function consolesounds(ent, other, activator)
+		i = qmath.irandom(1, <insert number of sounds here>);
+		if i == 1 then
+			sound.PlaySound(ent, <insert soundpath here>, 0);
+		end
+		if i == n then
+			sound.PlaySound(ent, <insert soundpath here>, 0);
+		end
+	end
+*/
+
+/*QUAKED func_forcefield (0 .5 .8) ? STARTOFF DONTTOGGLE ADMINS AUTOANIM X X X X NO_BORG
+-----DESCRIPTION-----
+A brush that remains invisible until it is contacted by a player, where it temporarily
+becomes visible.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Spawns in an off state, and must be used to be activated
+2: DONTTOGGLE - This entity cannot be used to be switched on and off (ie always on)
+4: ADMINS - Players in admin classes can move through the field
+8: AUTOANIM - If a model is spawned with it, it will animate at 10FPS repeatedly
+16: X - Unknown, do not use
+32: X - Unknown, do not use
+64: X - Unknown, do not use
+128: X - Unknown, do not use
+256: NO_BORG - If set, borg can't move through
+
+-----KEYS-----
+"flareWait" - How long the forcefield remains visible after the player contacts it (milliseconds)(default 150)
+"activateWait" - How long the forcefield remains visible after activation/deactivation(default 500)
+"damageWait" - How long the forecefield remains visible after it has been shot (default 400)
+"kickback" - How far the player gets pushed back when they touch the forcefield (default 50)
+"damage" - Damage sustained when the player touches the field (default 0 )
+"target" - Will fire this target every time it is toggled
+"model2" - .md3 model to also draw
+"color" - constantLight color
+"light" - constantLight radius
+"activateSnd" - sound file to play when the field is activated
+"damageSnd" - sound to play when the field is shot
+"touchSnd" - sound to play if the field is contacted by a player.
+"deactivateSnd" - sound to play when the field is turned off
+"hittarget" - target to fire when hit
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+/*QUAKED func_door (0 .5 .8) ? START_OPEN X CRUSHER	TREK_DOOR FACE OVERRIDE LOCKED ADMIN_ONLY CORRIDOR 
+-----DESCRIPTION-----
+A door that moves between its two positions. Can only translate around one axis at a time.
+Can be teamed with multiple doors to trigger simultaniously.
+
+-----SPAWNFLAGS-----
+1: START_OPEN : the door to moves to its destination when spawned, and operate in reverse.  It is used to temporarily or permanently close off an area when triggered (not useful for touch or takedamage doors).
+2: X : Unknown, do not use.
+4: CRUSHER : door will be stuck on it's open position
+8: TREK_DOOR : if set this door will have a reduced auto trigger volume
+16: FACE : if set, this door requires you to be facing it before the trigger will fire
+32: OVERRIDE : if set, targetted doors won't wait until they're clear before closing
+64: LOCKED : if set, door is locked at spawn
+128: ADMIN_ONLY : if set, door only opens for admins
+256: CORRIDOR : if set, door will have en even more reduced auto trigger volume
+
+-----KEYS-----
+"model2" - .md3 model to also draw
+"angle" - determines the opening direction
+"speed" - movement speed (100 default)
+"lip" - lip remaining at end of move (8 default)
+"dmg" - damage to inflict when blocked (2 default)
+"color" - constantLight color
+"light" - constantLight radius
+"health" - if set, the door must be shot open
+"soundstart" - sound to play at start of moving
+"soundstop" - sound to play at stop of moving
+"soundlocked" - sound to play when locked
+"team" - all doors that have the same team will move simultaniously
+
+Ther following keys are only required on one in a team of doors (master door)
+"targetname" - if set, no touch field will be spawned and a remote button or trigger field activates the door.
+"targetname2" - for target_doorlock.
+"wait" - wait before returning (3 default, -1 = never return)
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+/*QUAKED func_brushmodel (0 .5 .8) ?
+-----DESCRIPTION-----
+A brushmodel. 
+For use with func_lightchange.
+Must have an origin brush.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"targetname" - have this be the target of a func_lightchange
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+/*QUAKED func_lightchange (0 .5 .8) ?
+-----DESCRIPTION-----
+Can be used for "toggling" light on/off.
+Must target a func_brushmodel.
+Must have an origin brush.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - func_brushmodel to swap positions with
+
+q3map2:
+"_clone" - _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" - see _clone
+"_castShadows" OR "_cs" - sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" - sets whether the entity receives shadows
+*/
+
+/*QUAKED func_targetmover (0 .5 .8) ? START_OPEN
+This work similar to an func_door but will move between the entities origin and an target origin.
+Added for enhanced SP level support, that's why it is a quite basic entity.
+
+"target" info_notnull, where to move
+"wait"	 time beforce returning, -1 = toggle
+"speed"  speed to move with (default: 200)
+
+q3map2:
+"_clone" _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" see _clone
+"_castShadows" OR "_cs" sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" sets whether the entity receives shadows
+*/
+
+/*QUAKED func_breakable (0 .8 .5) ? x x x x INVINCIBLE x x x REPAIRABLE NOORIGIN
+-----DESCRIPTION-----
+When destroyed, fires it's trigger and explodes
+When repaired just fires it's targets so things like forcefields get turned back on
+
+-----SPAWNFLAGS-----
+1: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+2: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+4: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+8: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+16: INVINCIBLE - can only be broken by being used
+32: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+64: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+128: DO NOT USE! This may come in conflict with shared functions from misc_model_breakable.
+256: REPAIRABLE - can be repaired with hyperspanner, requires an origin brush
+512: NOORIGIN   - used for retrofitting repairability on func_breakables with no origin brush, do not use for new maps
+
+-----KEYS-----
+"targetname" - entities with matching target will fire it
+"paintarget" - target to fire when hit (but not destroyed)
+"wait" - how long minimum to wait between firing paintarget each time hit
+"model2" - .md3 model to also draw
+"target" - all entities with a matching targetname will be used when this is destoryed
+"health" - default is 10
+
+"luaDie" - Lua-Hook for when the breakable dies
+
+"team" - This cannot take damage from members of this team (2 = blue, 1 = red) 2 will exclude players/clients in RPG-X
+
+Damage: default is none
+"splashDamage" - damage to do (will make it explode on death
+"splashRadius" - radius for above damage
+
+"material" - sets the chunk type:
+ 0 - none (default)
+ 1 - metal
+ 2 - glass
+ 3 - glass and metal
+ 4 - wood
+ 5 - stone
+
+Don't know if these work:  
+"color" - constantLight color
+"light" - constantLight radius
+
+q3map2:
+"_clone" _clonename of entity to clone brushes from. Note: this entity still needs at least one brush which gets replaced.
+"_clonename" see _clone
+"_castShadows" OR "_cs" sets whether the entity casts shadows
+"_receiveShadows" OR "_rs" sets whether the entity receives shadows
+
+-----LUA-----
+Retrofitting repairability using lua:
+Retrofitting repairability is possible, however it is not easy as we likely have to come by the fact taht we do not have an origin brush.
+To start here is the code with no origin brush present: 
+			
+	ent = entity.FindBModel(bmodel);  
+	ent:SetSpawnflags(ent:GetSpawnflags() + 768);  
+	--Do not use entity.CallSpawn(ent); after this point for this entity!
+	mover.SetAngles2(ent, posX, posY, posZ);
+	ent:SetN00bCount(radius);
+
+The bmodel-number can be retrieved ingame as an admin/developer by pointing at the entity and using the /getentinfo command
+posX, Y andf Z are the origin (usually the center of brush) of the entity and need too be retrieved manually from within the radiant
+radius is a spherical distance around origin/angles2 that the hyperspanner will respond to. It should barely cover the entire facing side of the entity.
+
+In the unlikely event that we do have an origin brush this is the code:
+			
+	ent = entity.FindBModel(bmodel);  
+	ent:SetSpawnflags(ent:GetSpawnflags() + 256);  
+*/
+
+// RPG-X fx_*
+
+/*QUAKED fx_spark (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+Emits sparks at the specified point in the specified direction.
+
+Can be toggled by being used, but use with caution as updates every second instead of every 10 seconds, 
+which means it sends 10 times the information that an untoggleable steam will send.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn.
+
+-----KEYS-----
+"targetname" - toggles on/off whenever used
+"target" - ( optional ) direction to aim the sparks in, otherwise, uses the angles set in the editor.
+"wait" - interval between events, default 2000 ms (randomly twice as long) 
+*/
+
+
+/*QUAKED fx_steam (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF 
+-----DESCRIPTION-----
+Emits steam at the specified point in the specified direction. Will point at a target if one is specified.
+
+Can be toggled but use with caution as updates every second instead of every 10 seconds, 
+which means it sends 10 times the information that an untoggleable steam will send.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - steam is of at spawn  
+
+-----KEYS-----
+"targetname" - toggles on/off whenever used
+"damage" - damage to apply when caught in steam vent, default - zero damage (no damage). Don't add this unless you really have to.
+*/
+
+
+/*QUAKED fx_bolt (0 0 1) (-8 -8 -8) (8 8 8) SPARKS BORG TAPER SMOOTH
+-----DESCRIPTION-----
+Emits blue ( or borg green ) electric bolts from the specified point to the specified point
+
+Can be toggled by being used, but use with caution as updates every second instead of every 10 seconds, 
+which means it sends 10 times the information that an untoggleable steam will send.
+
+-----SPAWNFLAGS-----
+1: SPARKS - create impact sparks, probably best used for time delayed bolts
+2: BORG - Make the bolts green
+4: TAPER
+8: SMOOTH
+
+-----KEYS-----
+"targetname" - toggles on/off whenever used
+"wait" - seconds between bolts (0 is always on, default is 2.0, -1 for random number between 0 and 5), bolts are always on for 0.2 seconds
+"damage" - damage per server frame (default 0)
+"random" - bolt chaos (0.1 = too calm, 0.5 = default, 1.0 or higher = pretty wicked)
+*/
+
+/*QUAKED fx_transporter (0 0 1) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Emits transporter pad effect at the specified point. just rest it flush on top of the pad. 
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+none
+
+*/
+
+
+/*QUAKED fx_drip (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+Drips of a fluid that fall down from this point.
+
+Can be toggled by being used, but use with caution as updates every second instead of every 10 seconds, 
+which means it sends 10 times the information that an untoggleable steam will send.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - effect is off at spawn
+
+-----KEYS-----
+"targetname" - toggles on/off whenever used
+"damage" - type of drips. 0 = water, 1 = oil, 2 = green
+"random" - (0...1) degree of drippiness. 0 = one drip, 1 = Niagara Falls
+*/
+
+
+/*QUAKED fx_fountain (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+Fountain-Effect as seen iin the Garden of Scilence holodeck Programm.
+This is just one single strain of the original effect (which had all four strains hardcoded)
+
+Use with caution as this refreshes 10 times a second.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect spawns in an off state
+
+-----KEYS-----
+"targetname" - name of entity when used turns this ent on/off
+"target" - link to an info_notnull entity or similar to position where the end point of this FX is
+*/
+
+
+/*QUAKED fx_surface_explosion (0 0 1) (-8 -8 -8) (8 8 8) NO_SMOKE LOUDER NODAMAGE
+-----DESCRIPTION-----
+Creates a triggerable explosion aimed at a specific point.  Always oriented towards viewer.
+
+-----SPAWNFLAGS-----
+1: NO_SMOKE - Does not create smoke after explosion
+2: LOUDER - Cheap hack to make the explosion sound louder.
+4: NODAMAGE - Does no damage
+
+-----KEYS-----
+"target" (optional) If no target is specified, the explosion is oriented up
+"damage" - Damage per blast, default is 50. Damage falls off based on proximity.
+"radius" - blast radius (default 20)
+"speed" - camera shake speed (default 12).  Set to zero to turn camera shakes off
+"targetname" - triggers explosion when used
+*/
+
+
+/*QUAKED fx_blow_chunks (0 0 1) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+Creates a triggerable chunk spewer that can be aimed at a specific point.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - (required) Target to spew chunks at
+"targetname" - triggers chunks when used 
+"radius" - Average size of a chunk (default 65)
+
+"material" - default is "metal" - choose from this list:
+	Metal = 1
+	Glass = 2
+	Glass Metal = 3
+	Wood = 4
+	Stone = 5
+*/
+
+/*QUAKED fx_smoke (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+Emits cloud of thick black smoke from specified point.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"target" - optional, if no target is specified, the smoke drifts up
+"targetname" - fires only when used
+"radius" - size of the smoke puffs (default 16.0)
+*/
+
+
+/*QUAKED fx_electrical_explosion (0 0 1) (-8 -8 -8) (8 8 8) x x NODAMAGE
+-----DESCRIPTION-----
+Creates a triggerable explosion aimed at a specific point
+
+-----SPAWNFLAGS-----
+1: NODAMAGE - does no damage
+
+-----KEYS-----
+"target" - optional, if no target is specified, the explosion is oriented up
+"damage" - Damage per blast, default is 20. Damage falls off based on proximity.
+"radius" - blast radius (default 50)
+"targetname" - explodes each time it's used
+*/
+
+/*QUAKED fx_phaser (0 0 1) (-8 -8 -8) (8 8 8) NO_SOUND DISRUPTOR
+-----DESCRIPTION-----
+A phaser effect for use as a ship's weapon.
+
+-----SPAWNFLAGS-----
+1: NO_SOUND - will not play it's sound
+2: DISRUPTOR - will display a green disruptor beam
+
+-----KEYS-----
+"target" - endpoint
+"wait" - how long the phaser fires
+"scale" - adjust the effects scale, default: 20
+"customSnd" - use a custom sound
+"delay" - delay the effect, but not the sound. Can be used to adjust the timing between effect and customSnd
+"impact" - set to 1 if you want an impact to be drawn
+*/
+
+/*QUAKED fx_torpedo (0 0 1) (-8 -8 -8) (8 8 8) QUANTUM NO_SOUND
+-----DESCRIPTION-----
+A torpedo effect for use as a ship's weapon.
+
+-----SPAWNFLAGS-----
+1: QUANTUM - set this flag if you whant an quantum fx instead of an photon fx
+2: NO_SOUND - Will not play it's sound
+
+-----KEYS-----
+"target" - used for the calculation of the direction
+"wait" - time in seconds till fx can be used again
+"noise" - sound to play
+"soundNoAmmo" - sound to play if ammo is depleted
+"count" - ammount of torpedos that can be fired (defaults to -1 = infinite)
+"speed" - a speed modifier (default: 2.5)
+*/
+
+/*QUAKED fx_fire (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+A fire affect based on the adminguns fire effect.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"targetname" - toggles effect on/off whenver used, requires 10x more thinks
+"size" - how big the fire shoud be (default: 64)
+"angles" - fires angles (default: 0 0 0 = UP)
+*/
+
+/*QUAKED fx_particle_fire (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+A particle based fire effect. Use this sparingly as it is an fps killer.
+If you want to use a bunch of fires use fx_fire.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"targetname" - toggles effect on/off whenver used, requires 10x more thinks
+"size" - how big the fire shoud be (default: 10)
+*/
+
+// RPG-X ui_*
+/*QUAKED ui_transporter (1 0.5 0) (-8 -8 -8) (8 8 8) ? DISABLED
+-----DESCRIPTION-----
+Opens the transporter UI.
+
+-----SPAWNFLAGS-----
+1: DISABLED	- Entity is disabled at spawn
+
+-----KEYS-----
+"swapname" - enables/disables entity(NO_ACTIVATOR/SELF flag must be checked for any entity using this)
+"target" - trigger_transporter to use with this ui_transporter
+*/
+
+/*QUAKED ui_msd (1 0.5 0) (-8 -8 -8) (8 8 8) ? DISABLED
+-----DESCRIPTION-----
+Opens a Master Systems Display. It will display data grabbed from a target_shiphealth.
+
+-----SPAWNFLAGS-----
+1: DISABLED	- Entity is disabled at spawn
+
+-----KEYS-----
+"swapname" - enables/disables entity(NO_ACTIVATOR/SELF flag must be checked for any entity using this)
+"target" - target_shiphealth to draw info from
+*/
+
+/*QUAKED target_shaderremap (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+This will remap the shader "falsename" with shader "truename" and vice versa.
+It will save you some vfx-usables.
+
+This Entity only works on RPGXEF
+
+-----SPAWNFLAGS-----
+none
+
+------KEYS-----
+"targetname" - when used will toggle the shaders
+"falsename" - shader taht is ingame at spawn
+"truename" - shader that will replace it
+*/
+
+/*QUAKED ui_holodeck (1 0.5 0) (-8 -8 -8) (8 8 8) ? DISABLED
+-----Description-----
+Will open  the holodeck UI once this is implemented. For now this will not spawn.
+
+-----SPAWNFLAGS-----
+1: DISABLED	Entity is disabled at spawn
+
+-----KEYS-----
+"swapname" - enables/disables entity(NO_ACTIVATOR/SELF flag must be checked for any entity using this)
+"target" - trigger_holodeck to use with this ui_holodeck
+*/
+
+/*QUAKED fx_cooking_steam (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+Emits slowly moving steam puffs that rise up from the specified point
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"targetname" - toggles effect on/off whenver used
+"distance" - smoke puff size ( default 3.0 )
+*/
+
+/*QUAKED fx_elecfire (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+Emits sparks at the specified point in the specified direction
+Spawns smoke puffs.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"targetname" - toggles effect on/off whenver used
+*/
+
+/*QUAKED fx_forge_bolt (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF DELAYED SPARKS PULSE TAPER SMOOTH
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+Emits freaky orange bolts, sending pulses down the length of the beam if desired
+
+-----SPAWNFLAGS-----
+1: STARTOFF - effect is initially off
+2: DELAYED - bolts are time delayed, otherwise effect continuously fires
+4: SPARKS - create impact sparks, probably best used for time delayed bolts
+8: PULSE - sends a pulse down the length of the beam.
+16: TAPER - Bolt will taper on one end
+32: SMOOTH - Bolt texture stretches across whole length, makes short bolts look much better.
+
+-----KEYS-----
+"wait" - seconds between bolts, only valid when DELAYED is checked (default 2)
+"damage" - damage per server frame (default 0)
+"targetname" - toggles effect on/off each time it's used
+"random" - bolt chaos (0.1 = too calm, 0.4 = default, 1.0 or higher = pretty wicked)
+"radius" - radius of the bolt (3.0 = default) 
+*/
+
+/*QUAKED fx_plasma (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+Emits plasma jet directed from the specified point to the specified point. Jet size scales based on length.  
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"target" - (required) Direction of jet
+"targetname" - fires only when used
+"startRGBA" - starting cone color, Red Green Blue Alpha 
+	(default  100 180 255 255) Light-Blue
+"finalRGBA" - final cone color, Red Green Blue Alpha 
+	(default  0 0 180 0) Blue
+"damage" - damage PER FRAME, default zero
+*/
+
+/*QUAKED fx_energy_stream (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+Creates streaming particles that travel between two points--for Stasis level. ONLY orients vertically.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"damage" - amount of damage to player when standing in the stream (default 0)
+"target" - (required) End point for particle stream.
+"targetname" - toggle effect on/off each time used.
+*/
+
+/*QUAKED fx_transporter_stream (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+Creates streaming particles that travel between two points--for forge level.
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect will be off at spawn
+
+-----KEYS-----
+"target" - (required) End point for particle stream.
+"targetname" - fires only when used
+*/
+
+//*QUAKED fx_explosion_trail (0 0 1) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+Creates a triggerable explosion aimed at a specific point.  Always oriented towards viewer.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+"target" - (required) end point for the explosion
+"damage" - Damage per blast, default is 150. Damage falls off based on proximity.
+"radius" - blast radius/explosion size (default 80)
+"targetname" - triggers explosion when used
+*/
+
+/*QUAKED fx_borg_energy_beam (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF CONE
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+A borg tracing beam that either carves out a cone or swings like a pendulum, sweeping across an area. 
+
+-----SPAWNFLAGS-----
+1: STARTOFF - The trace beam will start when used.
+2: CONE - Beam traces a cone, default trace shape is a pendulum, sweeping across an area.
+
+-----KEYS-----
+"radius" - Radius of the area to trace (default 30)
+"speed" - How fast the tracer beam moves (default 100)
+"startRGBA" - Effect color specified in RED GREEN BLUE ALPHA (default 0 255 0 128)
+"target" - (required) End point for trace beam, should be placed at the very center of the trace area.
+"targetname" - fires only when used
+*/
+
+/*QUAKED fx_shimmery_thing (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF TAPER 
+-----DESCRIPTION-----
+Creates a shimmering cone or cylinder of colored light that stretches between two points.  Looks like a teleporter type thing. 
+
+-----SPAWNFLAGS-----
+1: STARTOFF - Effect turns on when used.
+2: TAPER - Cylinder tapers toward the top, creating a conical effect
+
+-----KEYS-----
+"radius" - radius of the cylinder or of the base of the cone. (default 10)
+"target" - (required) End point for stream.
+"targetname" - fires only when used
+"wait" - how long in ms to stay on before turning itself off ( default 2 seconds (2000 ms), -1 to disable auto shut off )
+*/
+
+/*QUAKED fx_borg_bolt (0 0 1) (-8 -8 -8) (8 8 8) STARTOFF NO_PROXIMITY_FX
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+Emits yellow electric bolts from the specified point to the specified point.
+Emits showers of sparks if the endpoints are sufficiently close.
+Has an Ugly FT-Think, so don't use unless needed
+
+-----SPAWNFLAGS-----
+STARTOFF - effect is initially off
+NO_PROXIMITY_FX - Will deactivate proximity-fx associated with this. Check it if you don't use movers as else the entity thinks EVERY frame (like on borg2)
+
+-----KEYS-----
+"target" - (required) end point of the beam. Can be a func_train, info_notnull, etc.
+"message" - moves start point of the beam to this ent's origin. Only useful if the beam connects 2 movers.
+"targetname" - toggles effect on/off each time it's used
+*/
+
+/*QUAKED target_shiphealth (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+This Entity manages a ships health. Ship Health is reduced via administrative/delegable console command "/shipdamage [damage]"
+Repairing is based on a % per minute basis for both shields and hull.
+The entity features interconnectivity with other systems such as warpdrive or turbolift with a random yet incresing chance to turn them off whenever hulldamage occurs. This includes Shields.
+Further more the entity will automatically toggle red alert should it be any other and will activate shields if alert is set to any but green.
+If hull health hit's 0 it will kill any client outside an active safezone.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+Required Keys (If any of them are not given the entity will be removed at spawn):
+targetname: Name of the Ship/Station this entity represents. See target_zone for additional use of this key.
+health: Total Hull strength
+splashRadius: total shield strenght
+angle: Hull repair in % per minute
+speed: Shield repair in % per minute (only active if shield's aren't fried)
+
+greensound: Things to fire every time damage occurs (like FX)
+falsetarget: truename/swapCoreState for target_warp
+bluename: swapname for target_turbolift
+bluesound: swapname for ui_transporter
+falsename: falsename/redname for target_alert
+
+paintarget: target_zones configured as MSD-Display-Zones this thing shoud communicate with
+
+"model" - path to a shader with a MSD-Display (ship) to show. Default will be the Daedalus Class
+
+We're sponsoring a varayity, which were created by Alexander Richardson.
+The shaders for these are stowed in scripts/msd.shader in the pakX.pk3.
+It contains two versions: One for Texturing in Level design (like a display) and opne for the UI.
+To retrieve such an image simply look for the MSD-Folder in your radiants texture browser
+For personalized MSD's see segment below.
+
+Ship-Classname || Online Source || Shader-Name (for <type> insert gfx for UI-Shader and textures for texture shader)
+Constellation Class || http://lcarsgfx.wordpress.com/2012/09/12/constellation-sisyphus/ || <type>/msd/constellation
+Danube Runabout || http://lcarsgfx.wordpress.com/2012/06/30/the-blue-danube/ || <type>/msd/runabout
+Nova Class || http://lcarsgfx.wordpress.com/2012/06/13/can-you-tell-what-it-is-yet-2/ || <type>/msd/nova
+Galaxy Class || http://lcarsgfx.wordpress.com/2012/06/10/galaxy-class-redux-an-update/ || <type>/msd/galaxy
+Daedalus Class || http://lcarsgfx.wordpress.com/2011/12/10/daedalus-father-of-icarus/ || <type>/msd/daedalus
+Nebula Class || http://lcarsgfx.wordpress.com/2011/12/08/entering-the-nebula-part-2/ || <type>/msd/nebula
+Intrepid Class || http://lcarsgfx.wordpress.com/2011/05/16/an-intrepid-undertaking/ || <type>/msd/intrepid
+USCM (Alien) || http://lcarsgfx.wordpress.com/2010/08/10/in-space-no-one-can-hear-you-scream/ || <type>/msd/conestoga
+Olympic Class || http://lcarsgfx.wordpress.com/2010/09/11/the-olympic-class/ || <type>/msd/olympic
+Steamrunner Class || http://lcarsgfx.wordpress.com/2010/08/15/full-steam-ahead/ || <type>/msd/steamrunner
+Oberth Class || http://lcarsgfx.wordpress.com/2010/08/12/im-a-doctor-not-a-science-vessel/ || <type>/msd/oberth
+Soverign Class || http://lcarsgfx.wordpress.com/2010/03/01/sovereign-of-the-stars/ || <type>/msd/soverign
+Excelsior Class (Retro Design) || http://lcarsgfx.wordpress.com/2010/01/01/retro-excelsior/ || <type>/msd/excelsior-retro
+Excelsior Class || http://lcarsgfx.wordpress.com/2009/12/28/excelsior-class/ || <type>/msd/excelsior
+Springfield Class || http://lcarsgfx.wordpress.com/2009/12/25/not-the-springfield-from-the-simpsons/ || <type>/msd/springfield
+Defiant Class (8 Decks) || http://lcarsgfx.wordpress.com/2009/12/10/scaling-the-defiant/ || <type>/msd/defiant8
+Defiant Class (4 Decks) || http://lcarsgfx.wordpress.com/2009/12/06/the-face-of-defiance/ || <type>/msd/defiant4
+Miranda Class || http://lcarsgfx.wordpress.com/2009/12/05/miranda/ || <type>/msd/miranda
+Centaur Class || http://lcarsgfx.wordpress.com/2009/12/05/centaur-comes-galloping/ ||  <type>/msd/centaur
+Constitution Class || http://lcarsgfx.wordpress.com/2009/11/28/its-a-constitution/ || <type>/msd/constitution
+Ambassador Class || http://lcarsgfx.wordpress.com/2009/11/27/having-the-ambassador-round-for-dinner/ || <type>/msd/ambassador
+Cern Class || http://lcarsgfx.wordpress.com/2009/11/23/cern-class-by-john-eaves/ || <type>/msd/cern
+Akira Class || http://lcarsgfx.wordpress.com/2009/11/21/akira-ra-ra-ra/ || <type>/msd/akira
+Norway Class || http://lcarsgfx.wordpress.com/2009/11/21/norway-or-no-way/ || <type>/msd/norway
+New Orleans Class || http://lcarsgfx.wordpress.com/2009/11/16/the-new-orleans/ || <type>/msd/neworleans
+Cheyenne Class || http://lcarsgfx.wordpress.com/2009/11/16/cheyenne-class-msd/ || <type>/msd/cheyenne
+Sabre Class || http://lcarsgfx.wordpress.com/2009/11/07/sabre-rattling/ || <type>/msd/sabre
+
+-----Personalized MSD's-----
+Alexander is doing personalized variations og his MSD's in terms of Ship-Names and Registry-Numbers
+(as long as they do not have suffix-letters). If you'd like one you may contact him via E-Mail and request such a modification.
+In that request please also ask hom for a resulution of 2000px across (long side) as the game requires
+images to be displayed as MSD's to be roughly 2:1 and 2000 px is near the upper limit of what the game can handle.
+Also please ask him to give you the image as an *.jpg-file.
+
+Once you have the file put it in a subfolder (e.g. gfx) in either baseEF or RPG-X2.
+After that create a scripts/msd_shipname_registry.shader file (registry is optional, 
+however it is useful in avoiding collitions with ships of similar names)
+In that file add the following short script: 
+
+gfx/msd/akira //this will be the path to the image for the UI
+{
+	{
+		map textures/msd/akira.jpg //this will be the image you will use
+		blendFunc add //this will remove the black background. I might find a better solution...
+	}
+}
+
+textures/msd/akira //this will be the image you will use for texturing
+{
+	surfaceparm nolightmap
+	surfaceparm nomarks
+	{
+		map textures/msd/akira.jpg //this will be the image you will use
+	}
+	{
+		map textures/engineering/glass1.tga //this segment creates the glass effect to make it look like a display
+		blendfunc gl_one gl_one_minus_src_color
+		rgbGen identity
+		tcMod scale 3 3
+		tcGen environment
+	}
+}
+
+For distribution put both files (including their relative paths) in a *.pk3 file.
+*/
+
+/*QUAKED target_zone (1 0 0) ? SPAWN_SAFE SHIP
+-----DESCRIPTION-----
+A generic zone used for entities that need a generic pointer in the world. It needs to be specialized by the team-value.
+
+-----SPAWNFLAGS-----
+Note: Spawnflags will only work with the system they are attached to
+1: SPAWN_SAFE - For safezone only: Entity is spawned in it's safe configurartion
+2: SHIP - For safezone only: will mark this safezone as a ship safezone
+
+-----KEYS-----
+"targetname" - used to link with, some types require this for toggling
+"count" - specifies this zone's type:
+
+	0 - none, will free entity
+	1 - safezone for target_selfdestruct and target_shiphealth
+	2 - display zone for target_shiphealth (HUD overlay)
+
+-----USAGE-----
+As safezone:
+Usage for Escape Pods and similar:
+Fill your escape pod Interior with this trigger and have it targeted by a func_usable/target_relay/target_delay to toggle it between safe and unsafe states.
+
+Usage for multiple ships (and stations) like on rpg_runabout:
+Surround your entire ship with this trigger (or it's seperate elements with one each) and set it to STARTON and SHIP (spawnflags = 3). 
+Have it's targetname match the targetname of it's target_shiphealth-counterpart exactly (case-dependent) to automatically switch this safezone to unsafe should it be about to die.
+In case of a selfdestruct you will need to enter the targetname to automatically switch it to unsafe 50ms prior to the countdowns end.
+To get the correct one use the /safezonelist-command 
+*/
+
+/*QUAKED cinematic_camera (0 0.5 0) (-4 -4 -4) (4 4 4)
+-----DESCRIPTION-----
+Camera for cinematic. Normally spawn by Lua script.
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+none
+
+-----LUA-----
+To be written later.
+*/
+
+/*QUAKED func_stasis_door (0 .5 .8) START_LOCKED
+-----DESCRIPTION-----
+A bmodel that just sits there and opens when a player gets close to it.
+
+-----SPAWNFLAGS-----
+1: START_LOCKED - door is locked at spawn
+
+-----KEYS-----
+"targetname" - will open the door
+"swapname" - will lock the door (SELF/NO_ACTIVATOR needed)
+"wait" - time to wait before closing, -1 for manual trigger, default is 5 seconds
+*/
+
+/*QUAKED target_alert (1 0 0) (-8 -8 -8) (8 8 8) SOUND_TOGGLE SOUND_OFF
+-----DESCRIPTION-----
+This entity acts like 3-Alert-Conditions scripts.
+
+Any of the func_usables that are used as buttons must have the NO_ACTIVATOR spawnflag.
+
+-----SPAWNFLAGS-----
+1: SOUND_TOGGLE - if set the alert sound can be toggled on/off by using the alerts trigger again.
+2: SOUND_OFF - if SOUND_TOGGLE is set, the alert will be silent at beginning
+
+-----KEYS-----
+"greenname" - the trigger for green alert should target this				
+"yellowname" - the trigger for yellow alert should target this				
+"redname" - the trigger for red alert should target this				
+"bluename" - the trigger for blue alert should target this				
+"greentarget" - anything that should be toggled when activating green alert	
+"yellowtarget" - anything that should be toggled when activating yellow alert
+"redtarget" - anything that should be toggled when activating red alert	
+"bluetarget" - anything that should be toggled when activating blue alert	
+"greensnd" - targetname of target_speaker with sound for green alert		
+"yellowsnd" - targetname of target_speaker with sound for yellow alert		
+"redsnd" - targetname of target_speaker with sound for red alert			
+"bluesnd" - targetname of target_speaker with sound for blue alert
+
+shader remapping:
+"greenshader" - shadername of condition green
+"yellowshader" - shadername of condition yellow
+"redshader" - shadername of condition red
+"blueshader" - shadername of condition blue
+
+You can remap multiple shaders by separating them with \n.
+Example: "greenshader"	"textures/alert/green1\ntextures/alert/green2"
+*/
+
+/*QUAKED target_holodeck (1 0 0) (-8 -8 -8) (8 8 8)
+-----DESCRIPTION-----
+CURRENTLY DISABLED
+target for ui_holodeck
+
+-----SPAWNFLAGS-----
+none
+
+-----KEYS-----
+none
+*/
+
+/*QUAKED target_selfdestruct (1 0 0) (-8 -8 -8) (8 8 8) FREE COUNTDOWN
+-----DESCRIPTION-----
+DO NOT USE! This just sits here purely for documantation.
+This entity manages the self destruct.
+For now this should only be used via the selfdestruct console command, however it might be usable from within the radiant at a later date.
+Should this thing hit 0 the killing part for everyone outside a target_safezone will be done automatically.
+
+-----SPAWNFLAGS-----
+1: FREE - Entity will free once the countdown has ended one way or another
+2: COUNTDOWN - will think every .1 secs to display a running countdown.
+
+-----KEYS-----
+"wait" -  total Countdown-Time in secs
+"count" - warning intervall up to 60 secs in secs
+"n00bCount" - warning intervall within 60 secs in secs
+"health" - warning intervall within 10 secs in secs
+"flags" - are audio warnings 1 or 0?
+"bluename" - target_safezone this thing affects (multi-ship-maps only) will switch it unsafe at T-50ms
+"target" - Things like fx to fire once the countdown hits 0
+
+"damage" - leveltime of countdowns end
+"spawnflags" - 1 tells ent to free once aborted
+*/

@@ -16,6 +16,7 @@ using Microsoft.AspNet.Identity.EntityFramework;
 using RPGXEFDevTestServerManager.Controllers;
 using RPGXEFDevTestServerManager.ExternalHelpers;
 using RPGXEFDevTestServerManager.Models;
+using WithMartin.GitCommandBuilder.FluentApi;
 
 namespace RPGXEFDevTestServerManager
 {
@@ -71,6 +72,27 @@ namespace RPGXEFDevTestServerManager
             //container.Verify();
 
             DependencyResolver.SetResolver(new SimpleInjectorDependencyResolver(container));
+
+            ConfigureRPGXEFSrc(container);
+        }
+
+        private void ConfigureRPGXEFSrc(Container container)
+        {
+            var gitBuilder = new GitCommandBuilder("");
+            var ssh = container.GetInstance<SshHelper>();
+
+            try
+            {
+                // Clone on the vm because of .git directory access rights
+                // TODO: Find out why '.git': Not a Directory when not doing this on the vm
+                var gitCommand = gitBuilder.Clone().Repository("https://github.com/solarisstar/rpgxEF.git").Directory("/vagrant/RPGXEFSrc");
+                var command = gitCommand.ToString();
+                ssh.Run(command);
+            }
+            catch
+            {
+                // Already cloned
+            }
         }
     }
 }

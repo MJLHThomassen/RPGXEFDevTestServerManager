@@ -53,6 +53,8 @@ namespace RPGXEFDevTestServerManager.Controllers
         }
 
         [HttpGet]
+        [Authorize]
+        [ValidateAntiForgeryToken]
         public ActionResult Activate(string hash)
         {
             // TODO: How to give users feedback on this?

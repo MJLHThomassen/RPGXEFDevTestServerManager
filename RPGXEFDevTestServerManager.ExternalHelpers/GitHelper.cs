@@ -15,6 +15,11 @@ namespace RPGXEFDevTestServerManager.ExternalHelpers
             _git = git;
         }
 
+        public void Clone(string repo, string dir)
+        {
+            _git.Clone().Repository(repo).Directory(dir).Execute();
+        }
+
         public KeyValuePair<string, string> GetCurrentBranch()
         {
             var currentBranchHash = _git.RevParse().Short().Args("HEAD").Execute();

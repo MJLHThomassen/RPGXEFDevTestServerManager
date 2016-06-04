@@ -110,8 +110,61 @@ namespace RPGXEFDevTestServerManager.Controllers
         }
 
         //
-        // GET: /Account/Register
+        // GET: /Account/RegisterFirstUser
         [AllowAnonymous]
+        public ActionResult RegisterFirstUser()
+        {
+            // Allow registration only for first user
+            if (!UserManager.Users.Any())
+            {
+                return View("Register");
+            }
+            return RedirectToAction("Index", "Home");
+        }
+
+        //
+        // POST: /Account/RegisterFirstUser
+        [HttpPost]
+        [AllowAnonymous]
+        [ValidateAntiForgeryToken]
+        public async Task<ActionResult> RegisterFirstUser(RegisterViewModel model)
+        {
+            // Allow registration only for first user
+            if (!UserManager.Users.Any())
+            {
+                if (ModelState.IsValid)
+                {
+                    var user = new ApplicationUser
+                    {
+                        UserName = model.Email,
+                        Email = model.Email
+                    };
+
+                    var result = await UserManager.CreateAsync(user, model.Password);
+                    if (result.Succeeded)
+                    {
+                        await SignInManager.SignInAsync(user, false, false);
+                    
+                        // For more information on how to enable account confirmation and password reset please visit http://go.microsoft.com/fwlink/?LinkID=320771
+                        // Send an email with this link
+                        // string code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
+                        // var callbackUrl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: Request.Url.Scheme);
+                        // await UserManager.SendEmailAsync(user.Id, "Confirm your account", "Please confirm your account by clicking <a href=\"" + callbackUrl + "\">here</a>");
+
+                        return RedirectToAction("Index", "Home");
+                    }
+                    AddErrors(result);
+                }
+
+                // If we got this far, something failed, redisplay form
+                return View("Register", model);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        //
+        // GET: /Account/Register
         public ActionResult Register()
         {
             return View();
@@ -120,7 +173,6 @@ namespace RPGXEFDevTestServerManager.Controllers
         //
         // POST: /Account/Register
         [HttpPost]
-        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<ActionResult> Register(RegisterViewModel model)
         {
@@ -136,7 +188,7 @@ namespace RPGXEFDevTestServerManager.Controllers
                 if (result.Succeeded)
                 {
                     await SignInManager.SignInAsync(user, false, false);
-                    
+
                     // For more information on how to enable account confirmation and password reset please visit http://go.microsoft.com/fwlink/?LinkID=320771
                     // Send an email with this link
                     // string code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);

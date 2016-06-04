@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Web.Mvc;
-using System.Web.UI;
 using RPGXEFDevTestServerManager.ExternalHelpers;
 using RPGXEFDevTestServerManager.GitHelpers.Model;
 using RPGXEFDevTestServerManager.Models;
@@ -16,16 +14,29 @@ namespace RPGXEFDevTestServerManager.Controllers
         private readonly SshHelper _sshHelper;
         public readonly string _buildHistoryDir;
 
-        public HomeController(GitHelper gitHelper, SshHelper sshHelper, string buildHistoryDir)
+        public ApplicationUserManager UserManager { get; private set; }
+
+        public HomeController(
+            GitHelper gitHelper, 
+            SshHelper sshHelper, 
+            string buildHistoryDir,
+            ApplicationUserManager userManager)
         {
             _gitHelper = gitHelper;
             _sshHelper = sshHelper;
             _buildHistoryDir = buildHistoryDir;
+
+            UserManager = userManager;
         }
 
         [HttpGet]
         public ActionResult Index()
         {
+            if (!UserManager.Users.Any())
+            {
+                return RedirectToAction("RegisterFirstUser", "Account"); ;
+            }
+
             var currentBranch = _gitHelper.GetCurrentBranch();
             var remoteBranches = _gitHelper.GetRemoteBranches();
 
@@ -54,7 +65,6 @@ namespace RPGXEFDevTestServerManager.Controllers
 
         [HttpGet]
         [Authorize]
-        [ValidateAntiForgeryToken]
         public ActionResult Activate(string hash)
         {
             // TODO: How to give users feedback on this?

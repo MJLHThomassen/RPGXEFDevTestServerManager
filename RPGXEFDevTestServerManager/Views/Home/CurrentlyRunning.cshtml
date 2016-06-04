@@ -3,17 +3,17 @@
 <table class="table">
     <thead>
         <tr>
-            <th class="col-xs-4  col-sm-2">Hashcode</th>
-            <th class="hidden-xs col-sm-4">Branch Name</th>
-            <th class="col-xs-4  col-sm-3">Download</th>
-            <th class="col-xs-4  col-sm-2">Status</th>
+            <th class="col-xs-4  col-sm-2 col-md-1">Hashcode</th>
+            <th class="hidden-xs col-sm-3 col-md-3">Branch Name</th>
+            <th class="col-xs-7  col-sm-4 col-md-5">Download</th>
+            <th class="col-xs-4  col-sm-3 col-md-3">Status</th>
         </tr>
     </thead>
     <tbody>
         <tr>
-            <td class="col-xs-1  col-sm-2 col-md-1"><a href="https://github.com/solarisstar/rpgxEF/commit/@Model.CurrentBranch.HeadCommitHash">@Model.CurrentBranch.HeadCommitHash</a></td>
-            <td class="hidden-xs col-sm-4 col-md-4">@Model.CurrentBranch.Name</td>
-            <td class="col-xs-7  col-sm-4 col-md-5">
+            <td class="col-xs-1 col-sm-2 col-md-1"><a href="https://github.com/solarisstar/rpgxEF/commit/@Model.CurrentBranch.HeadCommitHash">@Model.CurrentBranch.HeadCommitHash</a></td>
+            <td class="hidden-xs col-sm-3 col-md-3">@Model.CurrentBranch.Name</td>
+            <td class="col-xs-7 col-sm-4 col-md-5">
                 <a class="btn btn-default@(Model.CurrentBranch.AreWindowsX86BinariesBuild ? "" : " disabled")"
                    href="/rpgxefdevtestserver/RPGXEFBuildHistory/@Model.CurrentBranch.HeadCommitHash/binaries/windows_x86.zip"
                    title="Windows 32-bits Binaries"
@@ -39,7 +39,7 @@
                     <i class="fa fa-file-text" aria-hidden="true"></i>
                 </a>
             </td>
-            <td class="col-xs-4  col-sm-2 col-md-2">
+            <td class="col-xs-4 col-sm-3 col-md-3">
                 @Model.CurrentBranch.Status
                 <i class="fa fa-spinner fa-pulse@(Model.CurrentBranch.Status == "Server Running" ? " hidden" : "")"></i>
             </td>

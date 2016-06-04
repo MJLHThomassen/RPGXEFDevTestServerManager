@@ -4,12 +4,12 @@
     ViewBag.Title = "Index Page";
 }
 <h1>RPG-X EF Development Test Server Manager</h1>
-<p>Download binaries for RPG-X EF versions running on the Development Test Server at testserver.last-outpost.net.</p>
+<p>Download binaries for RPG-X EF versions running on the Development Test Server at <b>testserver.last-outpost.net</b>.</p>
 <p>Registered users can also push branches to the test server which will automatically be build and copied over to the test server.</p>
 
 <div class="row">
     <div class="col-xs-12">
-        <h2>Currently Running</h2>
+        <p><h2>Currently Running</h2> (refresh your browser to update status)</p>
         <div id="divCurrentlyRunning">
             @{Html.RenderPartial("CurrentlyRunning", Model);}
         </div>
@@ -18,10 +18,10 @@
         <table class="table">
             <thead>
                 <tr>
-                    <th class="col-xs-4  col-sm-2">Hashcode</th>
-                    <th class="hidden-xs col-sm-5">Branch Name</th>
-                    <th class="col-xs-4  col-sm-3">Download</th>
-                    <th class="col-xs-4  col-sm-2">Activate</th>
+                    <th class="col-xs-4  col-sm-2 col-md-1">Hashcode</th>
+                    <th class="hidden-xs col-sm-3 col-md-3">Branch Name</th>
+                    <th class="col-xs-4  col-sm-4 col-md-5">Download</th>
+                    <th class="col-xs-4  col-sm-3 col-md-3">Activate</th>
                 </tr>
             </thead>
             <tbody>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Configuration;
+using System.Data.Entity;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -30,6 +31,13 @@ namespace RPGXEFDevTestServerManager
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
             ConfigureDI();
+
+            Database.SetInitializer(new CreateDatabaseIfNotExists<ApplicationDbContext>());
+
+            using (var db = new ApplicationDbContext())
+            {
+                db.Database.Initialize(false);
+            }
         }
 
         private void ConfigureDI()
@@ -62,7 +70,7 @@ namespace RPGXEFDevTestServerManager
             container.RegisterMvcControllers(Assembly.GetExecutingAssembly());
 
             container.Options.AllowOverridingRegistrations = true;
-            container.RegisterPerWebRequest(() => new HomeController(container.GetInstance<GitHelper>(), container.GetInstance<SshHelper>(), physicalRpgxEfBuildHistoryPath));
+            container.RegisterPerWebRequest(() => new HomeController(container.GetInstance<GitHelper>(), container.GetInstance<SshHelper>(), physicalRpgxEfBuildHistoryPath, container.GetInstance<ApplicationUserManager>()));
             container.Options.AllowOverridingRegistrations = false;
 
             // ???

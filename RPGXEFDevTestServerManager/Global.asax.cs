@@ -17,6 +17,7 @@ using Microsoft.AspNet.Identity.EntityFramework;
 using RPGXEFDevTestServerManager.Controllers;
 using RPGXEFDevTestServerManager.ExternalHelpers;
 using RPGXEFDevTestServerManager.Models;
+using WithMartin.GitCommandBuilder.Extensions;
 using WithMartin.GitCommandBuilder.FluentApi;
 
 namespace RPGXEFDevTestServerManager
@@ -91,10 +92,14 @@ namespace RPGXEFDevTestServerManager
 
             try
             {
+                // Boot the VM
+                var webRootPath = Server.MapPath("~");
+                "vagrant up".Run(Path.GetFullPath(Path.Combine(webRootPath, "rppgxefdevtestserver")));
+
                 // Clone on the vm because of .git directory access rights
                 // TODO: Find out why '.git': Not a Directory when not doing this on the vm
                 var gitCommand = gitBuilder.Clone().Repository("https://github.com/solarisstar/rpgxEF.git").Directory("/vagrant/RPGXEFSrc");
-                var command = gitCommand.ToString();
+                var command = "sudo " + gitCommand;
                 ssh.Run(command);
             }
             catch

@@ -225,6 +225,9 @@
     <Content Include="fonts\fontawesome-webfont.ttf" />
     <Content Include="fonts\fontawesome-webfont.eot" />
     <None Include="Properties\PublishProfiles\rpgxefdevtestservermanager.pubxml" />
+    <Content Include="rpgxefdevtestserver\buildAndRun.sh" />
+    <Content Include="rpgxefdevtestserver\sshBuildAndRun.sh" />
+    <Content Include="rpgxefdevtestserver\Vagrantfile" />
     <None Include="Scripts\jquery-1.10.2.intellisense.js" />
     <Content Include="Scripts\jquery-1.10.2.js" />
     <Content Include="Scripts\jquery-1.10.2.min.js" />
@@ -273,6 +276,7 @@
     <Content Include="Views\Shared\Lockout.cshtml" />
     <Content Include="Views\Shared\_LoginPartial.cshtml" />
     <Content Include="Views\Home\CurrentlyRunning.cshtml" />
+    <Content Include="Views\Account\RegisterFirstUser.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

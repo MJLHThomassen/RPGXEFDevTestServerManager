@@ -62,7 +62,7 @@ namespace RPGXEFDevTestServerManager.Models
         public bool RememberMe { get; set; }
     }
 
-    public class RegisterFirstUSerViewModel
+    public class RegisterFirstUserViewModel
     {
         [Required]
         [EmailAddress]

@@ -117,7 +117,7 @@ namespace RPGXEFDevTestServerManager.Controllers
             // Allow registration only for first user
             if (!UserManager.Users.Any())
             {
-                return View("Register");
+                return View("RegisterFirstUser");
             }
             return RedirectToAction("Index", "Home");
         }

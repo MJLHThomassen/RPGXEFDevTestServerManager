@@ -44,7 +44,6 @@
   <ItemGroup>
     <Compile Include="Attributes\GitArgumentAttribute.cs" />
     <Compile Include="Extensions\GitExecutableCommandExtensions.cs" />
-    <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="FluentApi\Commands\Branch\GitBranchFilterableCommands.cs" />
     <Compile Include="FluentApi\Commands\Branch\GitBranchCommitableCommands.cs" />
     <Compile Include="FluentApi\Commands\Branch\GitBranchLocatableCommands.cs" />
@@ -84,6 +83,12 @@
     <Compile Include="GitCommandBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FluentApi\GitRemote.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WithMartin.Extensions\WithMartin.Extensions.csproj">
+      <Project>{D2A25EE0-BFB1-4EE0-A3B7-0AFAAF40C197}</Project>
+      <Name>WithMartin.Extensions</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

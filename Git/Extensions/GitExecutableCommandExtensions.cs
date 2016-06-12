@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using WithMartin.Extensions;
 using WithMartin.GitCommandBuilder.FluentApi.Commands;
 
 namespace WithMartin.GitCommandBuilder.Extensions
@@ -13,7 +14,7 @@ namespace WithMartin.GitCommandBuilder.Extensions
         /// <returns>The output of the command</returns>
         public static string Execute(this IGitExecutableCommand cmd, bool cleanup = true)
         {
-            var output = cmd.ToString().Run(cmd.GitCommandBuilder.WorkingDirectory);
+            var output = cmd.ToString().RunInCmd(cmd.GitCommandBuilder.WorkingDirectory);
 
             if (!cleanup || string.IsNullOrEmpty(output))
                 return output;

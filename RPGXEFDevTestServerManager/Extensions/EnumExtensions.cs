@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using RPGXEFDevTestServerManager.Attributes;
-using RPGXEFDevTestServerManager.GitHelpers.Model;
 
 namespace RPGXEFDevTestServerManager.Extensions
 {

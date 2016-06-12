@@ -3,8 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Web.Mvc;
 using RPGXEFDevTestServerManager.ExternalHelpers;
-using RPGXEFDevTestServerManager.GitHelpers.Model;
 using RPGXEFDevTestServerManager.Models;
+using RPGXEFDevTestServerManager.Models.HomeViewModels;
 
 namespace RPGXEFDevTestServerManager.Controllers
 {
@@ -37,30 +37,38 @@ namespace RPGXEFDevTestServerManager.Controllers
                 return RedirectToAction("RegisterFirstUser", "Account"); ;
             }
 
-            var currentBranch = _gitHelper.GetCurrentBranch();
-            var remoteBranches = _gitHelper.GetRemoteBranches();
+            try
+            {
+                var currentBranch = _gitHelper.GetCurrentBranch();
+                var remoteBranches = _gitHelper.GetRemoteBranches();
 
-            var model = GetCurrentlyRunningViewModel(currentBranch);
+                var model = GetCurrentlyRunningViewModel(currentBranch);
 
-            model.Branches = remoteBranches
-                .Where(branch => branch.Key != currentBranch.Key)
-                .Select(branch => new BranchInfo
-                {
-                    HeadCommitHash = branch.Key,
-                    Name = branch.Value,
-                    HasBeenBuild = Directory.Exists(Path.Combine(_buildHistoryDir, branch.Key)),
-                    IsBuildLogAvailable =
-                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "buildlog.txt")),
-                    AreLinuxX86BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "linux_x86.zip")),
-                    AreLinuxX64BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "linux_x64.zip")),
-                    AreWindowsX86BinariesBuild =
-                        System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "windows_x86.zip")),
-                    AreWindowsX64BinariesBuild = false
-                });
-
-            return View(model);
+                model.Branches = remoteBranches
+                    .Where(branch => branch.Key != currentBranch.Key)
+                    .Select(branch => new BranchInfo
+                    {
+                        HeadCommitHash = branch.Key,
+                        Name = branch.Value,
+                        HasBeenBuild = Directory.Exists(Path.Combine(_buildHistoryDir, branch.Key)),
+                        IsBuildLogAvailable =
+                            System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "buildlog.txt")),
+                        AreLinuxX86BinariesBuild =
+                            System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "linux_x86.zip")),
+                        AreLinuxX64BinariesBuild =
+                            System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries", "linux_x64.zip")),
+                        AreWindowsX86BinariesBuild =
+                            System.IO.File.Exists(Path.Combine(_buildHistoryDir, branch.Key, "binaries",
+                                "windows_x86.zip")),
+                        AreWindowsX64BinariesBuild = false
+                    });
+                return View(model);
+            }
+            catch
+            {
+                // Server VM is probably not running
+                return View(new HomeViewModel());
+            }
         }
 
         [HttpGet]
@@ -81,11 +89,19 @@ namespace RPGXEFDevTestServerManager.Controllers
         [HttpGet]
         public PartialViewResult GetCurrentlyRunning()
         {
-            var currentBranch = _gitHelper.GetCurrentBranch();
+            try
+            {
+                var currentBranch = _gitHelper.GetCurrentBranch();
 
-            var model = GetCurrentlyRunningViewModel(currentBranch);
+                var model = GetCurrentlyRunningViewModel(currentBranch);
 
-            return PartialView("CurrentlyRunning", model);
+                return PartialView("CurrentlyRunning", model);
+            }
+            catch
+            {
+                // Server VM is probably not running
+                return PartialView("CurrentlyRunning", new HomeViewModel());
+            }
         }
 
         private HomeViewModel GetCurrentlyRunningViewModel(KeyValuePair<string, string> currentBranch)

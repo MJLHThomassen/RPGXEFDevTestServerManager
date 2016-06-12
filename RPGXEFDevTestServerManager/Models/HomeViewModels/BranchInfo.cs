@@ -1,6 +1,4 @@
-﻿using RPGXEFDevTestServerManager.Attributes;
-
-namespace RPGXEFDevTestServerManager.GitHelpers.Model
+﻿namespace RPGXEFDevTestServerManager.Models.HomeViewModels
 {
     public class BranchInfo
     {

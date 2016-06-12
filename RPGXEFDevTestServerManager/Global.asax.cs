@@ -2,7 +2,6 @@
 using System.Configuration;
 using System.Data.Entity;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Web.Mvc;
 using System.Web.Optimization;
@@ -17,8 +16,9 @@ using Microsoft.AspNet.Identity.EntityFramework;
 using RPGXEFDevTestServerManager.Controllers;
 using RPGXEFDevTestServerManager.ExternalHelpers;
 using RPGXEFDevTestServerManager.Models;
-using WithMartin.GitCommandBuilder.Extensions;
 using WithMartin.GitCommandBuilder.FluentApi;
+using WithMartin.Extensions;
+using Microsoft.AspNet.Identity.Owin;
 
 namespace RPGXEFDevTestServerManager
 {
@@ -62,10 +62,10 @@ namespace RPGXEFDevTestServerManager
 
             // Register Database stuff
             container.RegisterPerWebRequest<ApplicationDbContext>();
-            container.RegisterPerWebRequest<IUserStore<ApplicationUser>>(() => new UserStore<ApplicationUser>(container.GetInstance<ApplicationDbContext>()));
+            container.RegisterPerWebRequest<IUserStore<ApplicationUser, int>>(() => new ApplicationUserStore(container.GetInstance<ApplicationDbContext>()));
             container.RegisterPerWebRequest(() => HttpContext.Current.GetOwinContext().Authentication);
-            container.RegisterPerWebRequest<ApplicationUserManager>();
-            container.RegisterPerWebRequest<ApplicationSignInManager>();
+            container.RegisterPerWebRequest(() => HttpContext.Current.GetOwinContext().Get<ApplicationUserManager>());
+            container.RegisterPerWebRequest(() => HttpContext.Current.GetOwinContext().Get<ApplicationSignInManager>());
 
             // Register all Controllers
             container.RegisterMvcControllers(Assembly.GetExecutingAssembly());
@@ -94,7 +94,7 @@ namespace RPGXEFDevTestServerManager
             {
                 // Boot the VM
                 var webRootPath = Server.MapPath("~");
-                "vagrant up".Run(Path.GetFullPath(Path.Combine(webRootPath, "rppgxefdevtestserver")));
+                "vagrant up".RunInCmd(Path.GetFullPath(Path.Combine(webRootPath, "rpgxefdevtestserver")));
 
                 // Clone on the vm because of .git directory access rights
                 // TODO: Find out why '.git': Not a Directory when not doing this on the vm

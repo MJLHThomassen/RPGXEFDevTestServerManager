@@ -1,14 +1,21 @@
 ﻿using System;
-using System.Data.SqlTypes;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 
-namespace WithMartin.GitCommandBuilder.Extensions
+namespace WithMartin.Extensions
 {
-    public static class StringExtensions
+    /// <summary>
+    /// String Extensions for running strings in a cmd.exe environment.
+    /// </summary>
+    public static partial class StringExtensions
     {
-        public static string Run(this string cmd, string workingDir)
+        /// <summary>
+        /// Runs the string cmd in a cmd.exe environment and returns the result.
+        /// </summary>
+        /// <param name="cmd">The cmd to execute.</param>
+        /// <param name="workingDir">The working directory to execute the cmd in.</param>
+        /// <returns>The result of running the cmd. Does not return if the command spawns a new process that does not end.</returns>
+        public static string RunInCmd(this string cmd, string workingDir)
         {
             string command, args;
 
@@ -70,19 +77,19 @@ namespace WithMartin.GitCommandBuilder.Extensions
             }
         }
 
-        public static Task<string> RunAsync(this string cmd, string workingDir)
-        {
-            return Task.Run(() => Run(cmd, workingDir));
-        }
-
-        public static string Where(string command)
+        /// <summary>
+        /// Runs "where cmd" in a cmd.exe environment and returns the results.
+        /// </summary>
+        /// <param name="cmd">The cmd to "where".</param>
+        /// <returns>The result of the "where cmd" e.g. the location on disk where the cmd program is located if it is added to the PATH.</returns>
+        public static string Where(string cmd)
         {
             var proc = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = "/C where " + command,
+                    Arguments = "/C where " + cmd,
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

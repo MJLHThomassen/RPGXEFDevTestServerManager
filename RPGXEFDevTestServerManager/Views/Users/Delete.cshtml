@@ -1,0 +1,27 @@
+﻿@model RPGXEFDevTestServerManager.Models.DeleteViewModel
+@{
+    ViewBag.Title = "Delete";
+}
+
+<h2>@ViewBag.Title</h2>
+
+@using (Html.BeginForm("Delete", "Users", FormMethod.Post, new { @class = "form-horizontal", role = "form" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary("", new { @class = "text-danger" })
+
+    // Save properties for later use
+    @Html.HiddenFor(m => m.UserId)
+    @Html.HiddenFor(m => m.UserName)
+
+    <h4>Are you sure you wish to delete user <b>@Model.UserName</b>?</h4>
+    <h4>This action cannot be undone!</h4>
+    <hr />
+    
+    <input type="submit" class="btn btn-danger" value="Delete" name="Delete:Yes" />
+    <input type="submit" class="btn btn-primary" value="DON'T Delete" name="Delete:No" />    
+}
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}

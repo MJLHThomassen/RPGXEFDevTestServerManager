@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using WithMartin.GitCommandBuilder.Extensions;
+﻿using WithMartin.Extensions;
 
 namespace RPGXEFDevTestServerManager.ExternalHelpers
 {
@@ -20,22 +19,17 @@ namespace RPGXEFDevTestServerManager.ExternalHelpers
 
         public void GeneratePrivateKey(string filename = "id_rsa")
         {
-            $"ssh-keygen -q -t rsa -b 2048 -f {filename} -N \"\"".Run("");
+            $"ssh-keygen -q -t rsa -b 2048 -f {filename} -N \"\"".RunInCmd("");
         }
 
         public string Run(string cmd)
         {
-            return $"ssh -p {_port} -i {_keyfilePath} -o StrictHostKeyChecking=no {_username}@{_hostname} {cmd}".Run("");
-        }
-
-        public Task<string> RunAsync(string cmd)
-        {
-            return $"ssh -p {_port} -i {_keyfilePath} -o StrictHostKeyChecking=no {_username}@{_hostname} {cmd}".RunAsync("");
+            return $"ssh -p {_port} -i {_keyfilePath} -o StrictHostKeyChecking=no {_username}@{_hostname} {cmd}".RunInCmd("");
         }
 
         public void DownloadFile(string remoteFilePath, string localFilePath)
         {
-            $"scp {_username}@{_hostname}:{remoteFilePath} {localFilePath}".Run("");
+            $"scp {_username}@{_hostname}:{remoteFilePath} {localFilePath}".RunInCmd("");
         }
     }
 }

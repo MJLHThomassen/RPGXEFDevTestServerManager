@@ -1,0 +1,34 @@
+﻿@model RPGXEFDevTestServerManager.Models.UsersViewModel
+@{
+    ViewBag.Title = "Users";
+}
+
+<h2>@ViewBag.Title</h2>
+<hr/>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th class="col-xs-1">Id</th>
+        <th class="col-xs-10 col-md-5">UserName</th>
+        <th class="col-xs-1 col-md-6">Delete</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in Model.Users)
+    {
+        <tr>
+            <td class="col-xs-1">@user.Id</td>
+            <td class="col-xs-10 col-md-5">@user.UserName</td>
+            <td class="col-xs-1 col-md-6">
+                <button class="btn" onclick="window.location.href = '@Url.Action("Delete", "Users", new {userId = user.Id})'">
+                    <i class="fa fa-trash" aria-hidden="true"></i>
+                </button>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+<button class="btn btn-primary" onclick="window.location.href = '@Url.Action("Register", "Users")'">
+    <i class="fa fa-plus" aria-hidden="true"></i> Add User
+</button>

@@ -287,10 +287,6 @@
     <Content Include="Scripts\jquery-1.10.2.min.map" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Git\WithMartin.GitCommandBuilder.csproj">
-      <Project>{0FDEED02-CEB5-42B6-8245-20378158A957}</Project>
-      <Name>WithMartin.GitCommandBuilder</Name>
-    </ProjectReference>
     <ProjectReference Include="..\RPGXEFDevTestServerManager.ExternalHelpers\RPGXEFDevTestServerManager.ExternalHelpers.csproj">
       <Project>{de771dfa-7bea-4cda-9111-31441e4cc889}</Project>
       <Name>RPGXEFDevTestServerManager.ExternalHelpers</Name>

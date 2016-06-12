@@ -155,14 +155,20 @@ namespace RPGXEFDevTestServerManager.Controllers
                         Email = model.Email
                     };
 
-                    var result = await UserManager.CreateAsync(user, model.Password);
-                    if (result.Succeeded)
+                    var createResult = await UserManager.CreateAsync(user, model.Password);
+                    if (createResult.Succeeded)
                     {
-                        await SignInManager.SignInAsync(user, false, false);
-                   
-                        return RedirectToAction("Index", "Home");
+                        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
+                        var confirmEmailResult = await UserManager.ConfirmEmailAsync(user.Id, code);
+                        if (confirmEmailResult.Succeeded)
+                        {
+                            await SignInManager.SignInAsync(user, false, false);
+
+                            return RedirectToAction("Index", "Home");
+                        }
+                        AddErrors(confirmEmailResult);
                     }
-                    AddErrors(result);
+                    AddErrors(createResult);
                 }
 
                 // If we got this far, something failed, redisplay form

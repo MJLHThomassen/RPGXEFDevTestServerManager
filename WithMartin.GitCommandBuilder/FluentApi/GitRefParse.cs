@@ -1,5 +1,4 @@
-﻿using System;
-using WithMartin.GitCommandBuilder.FluentApi.Commands;
+﻿using WithMartin.GitCommandBuilder.FluentApi.Commands;
 using WithMartin.GitCommandBuilder.FluentApi.Commands.RevParse;
 
 namespace WithMartin.GitCommandBuilder.FluentApi

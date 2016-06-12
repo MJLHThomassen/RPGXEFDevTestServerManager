@@ -14,7 +14,7 @@ CommitPath=$RPGXEFBuidHistoryPath/$CommitHash
 #
 ########################################################
 
-echo 0"Restarting Server" | tee $CommitPath/status.txt
+echo "Restarting Server" | tee $CommitPath/status.txt
 
 # Stop game server
 PID=$(pidof -x rpgxEFded.x86_64)

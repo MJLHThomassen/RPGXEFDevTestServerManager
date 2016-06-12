@@ -50,6 +50,10 @@
       <Project>{D2A25EE0-BFB1-4EE0-A3B7-0AFAAF40C197}</Project>
       <Name>WithMartin.Extensions</Name>
     </ProjectReference>
+    <ProjectReference Include="..\WithMartin.GitCommandBuilder\WithMartin.GitCommandBuilder.csproj">
+      <Project>{0FDEED02-CEB5-42B6-8245-20378158A957}</Project>
+      <Name>WithMartin.GitCommandBuilder</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

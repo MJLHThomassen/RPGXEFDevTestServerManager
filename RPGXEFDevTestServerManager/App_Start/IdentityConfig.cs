@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Net;
 using System.Net.Mail;
-using System.Security;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
@@ -16,8 +14,8 @@ namespace RPGXEFDevTestServerManager
     {
         public Task SendAsync(IdentityMessage message)
         {
+            var from = new MailAddress("rpgxdevtestservermanager@last-outpost.net");
             var to = new MailAddress(message.Destination);
-            var from = new MailAddress("from@gmail.com");
             var mailMessage = new MailMessage(from, to)
             {
                 Subject = message.Subject,
@@ -26,11 +24,7 @@ namespace RPGXEFDevTestServerManager
 
             // Use the application or machine configuration to get the 
             // host, port, and credentials.
-            var client = new SmtpClient("smtp.gmail.com", 587)
-            {
-                Credentials = new NetworkCredential("from@gmail.com", "password"),
-                EnableSsl = true
-            };
+            var client = new SmtpClient();
 
             return client.SendMailAsync(mailMessage);
         }
@@ -58,7 +52,7 @@ namespace RPGXEFDevTestServerManager
             // Configure validation logic for passwords
             manager.PasswordValidator = new PasswordValidator
             {
-                RequiredLength = 6,
+                RequiredLength = 8,
                 RequireNonLetterOrDigit = true,
                 RequireDigit = true,
                 RequireLowercase = true,
@@ -68,7 +62,7 @@ namespace RPGXEFDevTestServerManager
             // Configure user lockout defaults
             manager.UserLockoutEnabledByDefault = true;
             manager.DefaultAccountLockoutTimeSpan = TimeSpan.FromMinutes(5);
-            manager.MaxFailedAccessAttemptsBeforeLockout = 5;
+            manager.MaxFailedAccessAttemptsBeforeLockout = 3;
 
             manager.EmailService = new EmailService();
 

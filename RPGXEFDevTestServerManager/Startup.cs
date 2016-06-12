@@ -1,7 +1,8 @@
 ﻿using Microsoft.Owin;
 using Owin;
+using RPGXEFDevTestServerManager;
 
-[assembly: OwinStartup(typeof(RPGXEFDevTestServerManager.Startup))]
+[assembly: OwinStartup(typeof(Startup))]
 namespace RPGXEFDevTestServerManager
 {
     public partial class Startup

@@ -3,26 +3,25 @@ using System.Configuration;
 using System.Data.Entity;
 using System.IO;
 using System.Reflection;
+using System.Web;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
-using SimpleInjector;
-using SimpleInjector.Integration.Web;
-using SimpleInjector.Integration.Web.Mvc;
-using WithMartin.GitCommandBuilder;
-using System.Web;
 using Microsoft.AspNet.Identity;
-using Microsoft.AspNet.Identity.EntityFramework;
+using Microsoft.AspNet.Identity.Owin;
 using RPGXEFDevTestServerManager.Controllers;
 using RPGXEFDevTestServerManager.ExternalHelpers;
 using RPGXEFDevTestServerManager.Models;
-using WithMartin.GitCommandBuilder.FluentApi;
+using SimpleInjector;
+using SimpleInjector.Integration.Web;
+using SimpleInjector.Integration.Web.Mvc;
 using WithMartin.Extensions;
-using Microsoft.AspNet.Identity.Owin;
+using WithMartin.GitCommandBuilder;
+using WithMartin.GitCommandBuilder.FluentApi;
 
 namespace RPGXEFDevTestServerManager
 {
-    public class MvcApplication : System.Web.HttpApplication
+    public class MvcApplication : HttpApplication
     {
         protected void Application_Start()
         {

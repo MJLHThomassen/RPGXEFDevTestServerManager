@@ -1,5 +1,4 @@
 ﻿using WithMartin.GitCommandBuilder.FluentApi.Commands;
-using WithMartin.GitCommandBuilder.FluentApi.Commands.Checkout;
 using WithMartin.GitCommandBuilder.FluentApi.Commands.Clean;
 using WithMartin.GitCommandBuilder.FluentApi.Commands.Clone;
 

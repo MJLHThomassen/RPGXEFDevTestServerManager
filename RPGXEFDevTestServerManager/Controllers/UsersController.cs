@@ -60,12 +60,15 @@ namespace RPGXEFDevTestServerManager.Controllers
                 if (result.Succeeded)
                 {
                     // Send an email with this link
-                    string code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
+                    var code = await UserManager.GenerateEmailConfirmationTokenAsync(user.Id);
+
+                    var homeUrl = Url.Action("Index", "Home", new {}, Request.Url.Scheme);
                     var callbackUrl = Url.Action("FirstTimeLogin", "Account", new {userEmail = user.Email, userId = user.Id, code = code }, Request.Url.Scheme);
+
                     await UserManager.SendEmailAsync(user.Id, 
                         "Confirm your RPG-X EF Dev Test Server account", 
-                        $"An account to use the RPG-X EF Dev Test Server on {Url.Action("Index", "Home")} was created for you by {User.Identity.Name}.\n\n" +
-                        "Please confirm your account by clicking the following link: " + callbackUrl);
+                        $"An account to use the RPG-X EF Dev Test Server on {homeUrl} was created for you by {User.Identity.Name}.\n\n" +
+                        $"Please confirm your account by clicking the following link: {callbackUrl}");
 
                     return RedirectToAction("Index", "Users");
                 }
